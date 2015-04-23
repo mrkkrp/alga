@@ -41,7 +41,7 @@ import qualified Data.Set as S
 import Text.XML.HXT.Core
 
 import Alga.Language (AlgaEnv, setRandGen, getRefs, evalDef)
-import Alga.Representation.Base (autoDel)
+import Alga.Representation (autoDel)
 
 type AutoMap = M.Map String AutoBatch
 

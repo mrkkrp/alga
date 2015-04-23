@@ -21,7 +21,7 @@
   TODO:
   - parser for configuration files;
   - translation from syntax tree to internal language;
-  - process of translation Principle -> [Int];
+  - process of translation Principle -> [Double];
   - patching of XML files.
 -}
 
@@ -29,7 +29,6 @@
 
 module Main (main) where
 
-import Control.Applicative ((<$>), (<*>))
 import Control.Arrow ((&&&), (>>>))
 import Data.Char (isLetter, isAlphaNum)
 
@@ -42,7 +41,8 @@ import Alga.Representation
     ( Statement (..)
     , probeAlga
     , parseAlga
-    , showStatement )
+    , showStatement
+    , autoDel )
 
 main :: IO ()
 main = defaultMain tests
@@ -58,8 +58,8 @@ prop_valid_probe = probeAlga . showStatement
 
 prop_pp_consistency :: Statement -> Bool
 prop_pp_consistency = id &&& (parseAlga "" . showStatement) >>> check
-    where check (x, Right (y:[])) = x == y
-          check _                 = False
+    where check (x, Right [y]) = x == y
+          check _              = False
 
 instance Arbitrary Statement where
     arbitrary =
@@ -96,6 +96,6 @@ arbitrarySel n =
 
 alphaNumIdentifier :: Gen String
 alphaNumIdentifier = (:) <$> ch0 <*> chN
-    where ch0 = arbitrary `suchThat` underscoreOr isLetter
-          chN = arbitrary `suchThat` all (underscoreOr isAlphaNum)
-          underscoreOr f x = x == '_' || f x
+    where ch0 = arbitrary `suchThat` spunctOr isLetter
+          chN = arbitrary `suchThat` all (spunctOr isAlphaNum)
+          spunctOr f x = x == '_' || x == autoDel || f x

@@ -24,8 +24,10 @@ module Alga.Representation
     , parseAlga
     , showStatement
     , showSyntaxTree
-    , showPrinciple )
+    , showPrinciple
+    , autoDel )
 where
 
+import Alga.Representation.Base (autoDel)
 import Alga.Representation.Parser
 import Alga.Representation.Show
