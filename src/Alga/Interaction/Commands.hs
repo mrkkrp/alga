@@ -29,7 +29,6 @@ module Alga.Interaction.Commands
 where
 
 import Control.Exception (SomeException, try)
-import Control.Monad (void)
 import Control.Monad.IO.Class
 import Data.Char (isDigit, isSpace)
 import Data.Foldable (find)
@@ -40,7 +39,6 @@ import System.Directory
     , doesFileExist
     , getCurrentDirectory
     , getHomeDirectory
-    , getTemporaryDirectory
     , setCurrentDirectory )
 import System.Exit (exitSuccess)
 import System.FilePath
@@ -50,22 +48,16 @@ import System.FilePath
     , splitDirectories
     , takeFileName
     , (</>) )
-import System.Process
-    ( shell
-    , createProcess
-    , waitForProcess
-    , delegate_ctlc )
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 
-import qualified Codec.Midi as Midi
 import qualified Data.Text.Format as F
 import qualified System.Console.Haskeline as L
 
 import Alga.Interaction.Base
 import Alga.Language
-import Alga.Midi
 import Alga.Representation
+import Alga.Translation
 
 data Cmd = Cmd
     { cmdName :: String
@@ -82,15 +74,12 @@ commands =
     , Cmd "def"     cmdDef     "Print definition of given symbol."     Names
     , Cmd "help"    cmdHelp    "Show this help text."                  None
     , Cmd "load"    cmdLoad'   "Load definitions from given file."     Files
-    , Cmd "make"    cmdMake'   "Generate and save MIDI file."          Files
-    , Cmd "prog"    cmdProg    "Set program for preview."              None
-    , Cmd "prv"     cmdPrv     "Play the score with external program." None
+    , Cmd "make"    cmdMake'   "Patch an XML file."                    Files
     , Cmd "prvlen"  cmdLength  "Set length of displayed results."      None
     , Cmd "purge"   cmdPurge   "Remove redundant definitions."         None
     , Cmd "pwd"     cmdPwd     "Print working directory."              None
     , Cmd "quit"    cmdQuit    "Quit the interactive environment."     None
     , Cmd "save"    cmdSave    "Save current environment in file."     Files
-    , Cmd "tempo"   cmdTempo   "Set tempo for preview."                None
     , Cmd "udef"    cmdUdef    "Remove definition of given symbol."    Names ]
 
 processCmd :: T.Text -> AlgaIO ()
@@ -166,52 +155,27 @@ loadOne given = do
 
 cmdMake' :: String -> AlgaIO ()
 cmdMake' arg =
-    let (s:q:b:f:_) = words arg ++ repeat ""
-    in cmdMake (parseInt s dfltSeed)
-               (parseInt q dfltQuarter)
-               (parseInt b dfltBeats)
+    let (s:b:f:_) = words arg ++ repeat ""
+    in cmdMake (parseInt   s dfltSeed)
+               (parseFloat b dfltBeats)
                f
 
-cmdMake :: Int -> Int -> Int -> String -> AlgaIO ()
-cmdMake s q b f = do
-  file   <- output f "mid"
-  midi   <- liftEnv $ genMidi s q b
-  result <- liftIO $ try (Midi.exportFile file midi)
-  case result of
-    Right _ -> liftIO $ F.print "MIDI file saved as \"{}\".\n" (F.Only file)
-    Left  e -> spitExc e
-
-cmdProg :: String -> AlgaIO ()
-cmdProg arg = do
-  prog <- getProg
-  setProg $ parseInt (trim arg) prog
-
-cmdPrv :: String -> AlgaIO ()
-cmdPrv arg = do
-  prvcmd  <- getPrvCmd
-  progOp  <- getProgOp
-  prog    <- show <$> getProg
-  tempoOp <- getTempoOp
-  tempo   <- show <$> getTempo
-  temp    <- liftIO getTemporaryDirectory
-  f       <- output "" "mid"
-  let (s:q:b:_) = words arg ++ repeat ""
-      file      = temp </> takeFileName f
-      cmd       = unwords [prvcmd, progOp, prog, tempoOp, tempo, file]
-  cmdMake (parseInt s dfltSeed)
-          (parseInt q dfltQuarter)
-          (parseInt b dfltBeats)
-          file
-  (_, _, _, ph) <- liftIO $ createProcess (shell cmd) { delegate_ctlc = True }
-  liftIO . void $ waitForProcess ph
+cmdMake :: Int -> Double -> String -> AlgaIO ()
+cmdMake s b f = undefined -- do
+  -- file   <- output f "mid"
+  -- midi   <- liftEnv $ genMidi s q b
+  -- result <- liftIO $ try (Midi.exportFile file midi)
+  -- case result of
+  --   Right _ -> liftIO $ F.print "MIDI file saved as \"{}\".\n" (F.Only file)
+  --   Left  e -> spitExc e
 
 cmdLength :: String -> AlgaIO ()
 cmdLength x = getPrevLen >>= setPrevLen . parseInt x
 
 cmdPurge :: String -> AlgaIO ()
-cmdPurge _ = do
-  liftEnv $ purgeEnv topDefs
-  liftIO $ T.putStrLn "Environment purged."
+cmdPurge _ = undefined -- do
+  -- liftEnv $ purgeEnv topDefs
+  -- liftIO $ T.putStrLn "Environment purged."
 
 cmdPwd :: String -> AlgaIO ()
 cmdPwd _ = liftIO (getCurrentDirectory >>= putStrLn)
@@ -229,11 +193,6 @@ cmdSave given = do
                liftIO (F.print "Environment saved as \"{}\".\n" (F.Only file))
     Left  e -> spitExc e
 
-cmdTempo :: String -> AlgaIO ()
-cmdTempo arg = do
-  tempo <- getTempo
-  setTempo $ parseInt (trim arg) tempo
-
 cmdUdef :: String -> AlgaIO ()
 cmdUdef arg = mapM_ f (words arg)
     where f name = do
@@ -245,6 +204,9 @@ parseInt s x
     | null s        = x
     | all isDigit s = read s :: Int
     | otherwise     = x
+
+parseFloat :: String -> Double -> Double
+parseFloat s x = undefined
 
 output :: String -> String -> AlgaIO String
 output given ext = do
@@ -269,6 +231,6 @@ cmdPrefix = ":"
 spitExc :: SomeException -> AlgaIO ()
 spitExc = liftIO . F.print "× {}.\n" . F.Only . show
 
-trim :: String -> String
-trim = f . f
-    where f = reverse . dropWhile isSpace
+-- trim :: String -> String
+-- trim = f . f
+--     where f = reverse . dropWhile isSpace

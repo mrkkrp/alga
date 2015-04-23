@@ -36,8 +36,7 @@ import Alga.Interaction
 data Opts = Opts
     { opInterac :: Bool
     , opSeed    :: Int
-    , opQuarter :: Int
-    , opBeats   :: Int
+    , opBeats   :: Double
     , opOutput  :: String
     , opLicense :: Bool
     , opVersion :: Bool
@@ -51,10 +50,9 @@ main = execParser opts >>= f
           f Opts { opInterac = True
                  , opFiles   = ns   } = g $ cmdLoad ns >> interaction version
           f Opts { opSeed    = s
-                 , opQuarter = q
                  , opBeats   = b
                  , opOutput  = out
-                 , opFiles   = ns   } = g $ cmdLoad ns >> cmdMake s q b out
+                 , opFiles   = ns   } = g $ cmdLoad ns >> cmdMake s b out
           g x     = T.putStrLn notice >> runAlga x
           version = "0.1.0"
 
@@ -87,16 +85,11 @@ runAlga :: AlgaIO () -> IO ()
 runAlga e = do
   params <- loadConfig
   wdir   <- getCurrentDirectory
-  void $ runMidaInt e
-       MidaSt { stPrevLen = lookupCfg params "prvlen" 18
-              , stSrcFile = lookupCfg params "src"    wdir </> "foo.da"
-              , stProg    = lookupCfg params "prog"   0
-              , stTempo   = lookupCfg params "tempo"  120 }
-       MidaCfg { cfgPrompt  = lookupCfg params "prompt"  "> "
-               , cfgVerbose = lookupCfg params "verbose" True
-               , cfgPrvCmd  = lookupCfg params "prvcmd"  "timidity"
-               , cfgProgOp  = lookupCfg params "progop"  "--force-program"
-               , cfgTempoOp = lookupCfg params "tempop"  "--adjust-tempo" }
+  void $ runAlgaInt e
+       AlgaSt { stPrevLen = lookupCfg params "prvlen" 18
+              , stSrcFile = lookupCfg params "src"    wdir </> "foo.da" }
+       AlgaCfg { cfgPrompt  = lookupCfg params "prompt"  "> "
+               , cfgVerbose = lookupCfg params "verbose" True }
 
 loadConfig :: IO Params
 loadConfig = do
@@ -127,19 +120,13 @@ options = Opts
   <> short 's'
   <> metavar "SEED"
   <> value dfltSeed
-  <> help ("Set seed for MIDI generation, default is " ++ show dfltSeed) )
-  <*> option auto
-  ( long "quarter"
-  <> short 'q'
-  <> metavar "TICKS"
-  <> value dfltQuarter
-  <> help ("Set ticks per quarter note, default is " ++ show dfltQuarter) )
+  <> help ("Set seed for random numbers, default is " ++ show dfltSeed) )
   <*> option auto
   ( long "beats"
   <> short 'b'
   <> metavar "BEATS"
   <> value dfltBeats
-  <> help ("Set total time in quarter notes, default is " ++ show dfltBeats) )
+  <> help ("Set total time in whole notes, default is " ++ show dfltBeats) )
   <*> strOption
   ( long "output"
   <> short 'o'

@@ -35,17 +35,9 @@ module Alga.Interaction.Base
     , setPrevLen
     , getSrcFile
     , setSrcFile
-    , getProg
-    , setProg
-    , getTempo
-    , setTempo
     , getPrompt
     , getVerbose
-    , getPrvCmd
-    , getProgOp
-    , getTempoOp
     , dfltSeed
-    , dfltQuarter
     , dfltBeats
     , processDef )
 where
@@ -80,16 +72,11 @@ deriving instance L.MonadException m => L.MonadException (AlgaInt m)
 
 data AlgaSt = AlgaSt
     { stPrevLen :: Int
-    , stSrcFile :: String
-    , stProg    :: Int
-    , stTempo   :: Int }
+    , stSrcFile :: String }
 
 data AlgaCfg = AlgaCfg
     { cfgPrompt  :: String
-    , cfgVerbose :: Bool
-    , cfgPrvCmd  :: String
-    , cfgProgOp  :: String
-    , cfgTempoOp :: String }
+    , cfgVerbose :: Bool }
 
 runAlgaInt :: Monad m => AlgaInt m a -> AlgaSt -> AlgaCfg -> m a
 runAlgaInt m st cfg =
@@ -107,41 +94,17 @@ getSrcFile = stSrcFile <$> get
 setSrcFile :: String -> AlgaIO ()
 setSrcFile x = modify $ \e -> e { stSrcFile = x }
 
-getProg :: AlgaIO Int
-getProg = stProg <$> get
-
-setProg :: Int -> AlgaIO ()
-setProg x = modify $ \e -> e { stProg = x }
-
-getTempo :: AlgaIO Int
-getTempo = stTempo <$> get
-
-setTempo :: Int -> AlgaIO ()
-setTempo x = modify $ \e -> e { stTempo = x }
-
 getPrompt :: AlgaIO String
 getPrompt = cfgPrompt <$> ask
 
 getVerbose :: AlgaIO Bool
 getVerbose = cfgVerbose <$> ask
 
-getPrvCmd :: AlgaIO String
-getPrvCmd = cfgPrvCmd <$> ask
-
-getProgOp :: AlgaIO String
-getProgOp = cfgProgOp <$> ask
-
-getTempoOp :: AlgaIO String
-getTempoOp = cfgTempoOp <$> ask
-
 dfltSeed :: Int
 dfltSeed = 0
 
-dfltQuarter :: Int
-dfltQuarter = 24
-
-dfltBeats :: Int
-dfltBeats = 16
+dfltBeats :: Double
+dfltBeats = 4
 
 processDef :: String -> SyntaxTree -> AlgaIO ()
 processDef n t = do

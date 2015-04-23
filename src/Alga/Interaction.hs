@@ -30,12 +30,10 @@ module Alga.Interaction
     , cmdMake
     , interaction
     , dfltSeed
-    , dfltQuarter
     , dfltBeats )
 where
 
 import Control.Monad.Reader
-import Prelude hiding (mapM_)
 import System.IO
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
@@ -51,17 +49,17 @@ import Alga.Representation
 interaction :: String -> AlgaIO ()
 interaction version = do
   liftIO $ hSetBuffering stdin LineBuffering
-  liftIO $ F.print "AAC Interactive Environment {}\n" (F.Only version)
-  L.runInputT (L.setComplete completionFunc L.defaultSettings) aacRepl
+  liftIO $ F.print "ALGA Interactive Environment {}\n" (F.Only version)
+  L.runInputT (L.setComplete completionFunc L.defaultSettings) algaRepl
 
-aacRepl :: L.InputT AlgaIO ()
-aacRepl = do
+algaRepl :: L.InputT AlgaIO ()
+algaRepl = do
   input <- getMultiline ""
   case input of
     Just x  -> do if T.pack cmdPrefix `T.isPrefixOf` T.strip x
                   then lift $ processCmd x
                   else lift $ processExpr x
-                  aacRepl
+                  algaRepl
     Nothing -> return ()
 
 getMultiline :: T.Text -> L.InputT AlgaIO (Maybe T.Text)
@@ -92,6 +90,6 @@ processExpr expr = do
                             (F.print "≡ {}" (F.Only $ showPrinciple prin))
                  spitList $ take len result
 
-spitList :: [Int] -> AlgaIO ()
+spitList :: [Double] -> AlgaIO ()
 spitList [] = liftIO $ T.putStrLn "⇒ ⊥"
 spitList xs = liftIO $ F.print "⇒ {}…\n" (F.Only $ unwords (show <$> xs))
