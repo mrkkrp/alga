@@ -56,19 +56,18 @@ data AutoTrack = AutoTrack
 
 type AutoSet = S.Set String
 
-patchAuto :: MonadIO m => Int -> Double -> Double -> FilePath ->
+patchAuto :: MonadIO m => Int -> Double -> FilePath ->
              (AutoMap -> IOSArrow XmlTree XmlTree) -> AlgaEnv m ()
-patchAuto s q b file exec = do
+patchAuto s b file exec = do
   setRandGen s
   refs <- nub . (>>= topRef) <$> getRefs
-  amap <- M.fromList <$> mapM (makeBatch q b) refs
+  amap <- M.fromList <$> mapM (makeBatch b) refs
   liftIO . void . runX $ readDocument [] file >>>
          exec amap >>> writeDocument [withIndent yes] file
 
-makeBatch :: Monad m => Double -> Double -> String ->
-             AlgaEnv m (String, AutoBatch)
-makeBatch q b t = do
-  let eval' = evalTrack q b t
+makeBatch :: Monad m => Double -> String -> AlgaEnv m (String, AutoBatch)
+makeBatch b t = do
+  let eval' = evalTrack b t
   volume <- eval' atnVolume
   mute   <- eval' atnMute
   igain  <- eval' atnIGain
@@ -77,22 +76,15 @@ makeBatch q b t = do
                , abMute   = mute
                , abIGain  = igain })
 
-evalTrack :: Monad m => Double -> Double -> String -> String ->
-             AlgaEnv m (Maybe AutoTrack)
-evalTrack q b t a = do
+evalTrack :: Monad m => Double -> String -> String -> AlgaEnv m (Maybe AutoTrack)
+evalTrack b t a = do
   let valRef = t ++ [autoDel] ++ a
       durRef = valRef ++ durSuffix
   val <- evalDef valRef
   dur <- evalDef durRef
   return $ if null val || null dur
            then Nothing
-           else Just $ slice b AutoTrack
-             { atVal = val, atDur = (`sdiv` q) <$> dur }
-
-sdiv :: Double -> Double -> Double
-a `sdiv` b
-    | b <= 0    = 1
-    | otherwise = a / b
+           else Just $ slice b AutoTrack { atVal = val, atDur = dur }
 
 slice :: Double -> AutoTrack -> AutoTrack
 slice b AutoTrack { atVal = val, atDur = dur } =
