@@ -95,7 +95,7 @@ pValue :: Parser Sel
 pValue = Value <$> pFloat
 
 pFloat :: Parser Double
-pFloat = float <?> "literal value"
+pFloat = try float <|> fromIntegral <$> natural <?> "literal value"
 
 pReference :: Parser Sel
 pReference = Reference <$> identifier <* notFollowedBy (reservedOp B.defOp)
@@ -169,6 +169,9 @@ identifier = Token.identifier lexer
 
 float :: Parser Double
 float = Token.float lexer
+
+natural :: Parser Integer
+natural = Token.natural lexer
 
 parens :: Parser a -> Parser a
 parens = Token.parens lexer
