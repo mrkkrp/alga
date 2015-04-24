@@ -63,7 +63,7 @@ patchAuto s b file exec = do
   refs <- nub . (>>= topRef) <$> getRefs
   amap <- M.fromList <$> mapM (makeBatch b) refs
   liftIO . void . runX $ readDocument [] file >>>
-         exec amap >>> writeDocument [withIndent yes] file
+         exec amap >>> writeDocument [withIndent yes] file >>> errorMsgStderr
 
 makeBatch :: Monad m => Double -> String -> AlgaEnv m (String, AutoBatch)
 makeBatch b t = do

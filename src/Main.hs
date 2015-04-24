@@ -87,7 +87,7 @@ runAlga e = do
   wdir   <- getCurrentDirectory
   void $ runAlgaInt e
        AlgaSt { stPrevLen = lookupCfg params "prvlen" 18
-              , stSrcFile = lookupCfg params "src"    wdir </> "foo.da" }
+              , stSrcFile = lookupCfg params "src"    wdir </> "foo.ga" }
        AlgaCfg { cfgPrompt  = lookupCfg params "prompt"  "> "
                , cfgVerbose = lookupCfg params "verbose" True }
 

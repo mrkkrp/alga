@@ -162,13 +162,9 @@ cmdMake' arg =
                f
 
 cmdMake :: Int -> Double -> String -> AlgaIO ()
-cmdMake s b f = undefined -- do
-  -- file   <- output f "mid"
-  -- midi   <- liftEnv $ genMidi s q b
-  -- result <- liftIO $ try (Midi.exportFile file midi)
-  -- case result of
-  --   Right _ -> liftIO $ F.print "MIDI file saved as \"{}\".\n" (F.Only file)
-  --   Left  e -> spitExc e
+cmdMake s b f = do
+  file   <- output f "xml"
+  liftEnv $ patchAuto s b file cubaseBackend
 
 cmdLength :: String -> AlgaIO ()
 cmdLength x = getPrevLen >>= setPrevLen . parseNum x

@@ -32,17 +32,18 @@ import Alga.Translation.Base
 infixr 5 />/
 
 cubaseBackend :: AutoMap -> IOSArrow XmlTree XmlTree
-cubaseBackend m = "tracklist" />/ "list" />/ processChildren (procTrack m)
+cubaseBackend m = "tracklist" />/ "list" />/ "obj" />/ procTrack m
 
 procTrack :: (ArrowXml a, ArrowChoice a) => AutoMap -> a XmlTree XmlTree
 procTrack m = (trackName >>> arr (`M.lookup` m)) &&& this >>>
-              proc (x, tree) ->
+             proc (x, tree) ->
                   case x of
                     Nothing -> this     -< tree
                     Just b  -> procAuto -< (b, tree)
 
 procAuto :: ArrowXml a => a (AutoBatch, XmlTree) XmlTree
-procAuto = arr snd >>> replaceChildren (txt "Hello, Cubase!")
+procAuto = arr snd >>> inClass "MAutomationNode"
+           (replaceChildren $ txt "Hello, Cubase!")
 
 trackName :: ArrowXml a => a XmlTree String
 trackName = alt ofClass cs /> ofClass "MListNode" /> getStr "Name"
@@ -50,6 +51,9 @@ trackName = alt ofClass cs /> ofClass "MListNode" /> getStr "Name"
 
 alt :: ArrowXml a => (b -> a XmlTree XmlTree) -> [b] -> a XmlTree XmlTree
 alt a = foldr ((<+>) . a) this
+
+inClass :: ArrowXml a => String -> a XmlTree XmlTree -> a XmlTree XmlTree
+inClass cls action = processChildren $ action `when` ofClass cls
 
 ofClass :: ArrowXml a => String -> a XmlTree XmlTree
 ofClass cls = isElem >>> hasName "obj" >>> hasAttrValue "class" (== cls)
