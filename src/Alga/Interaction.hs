@@ -92,4 +92,8 @@ processExpr expr = do
 
 spitList :: [Double] -> AlgaIO ()
 spitList [] = liftIO $ T.putStrLn "⇒ ⊥"
-spitList xs = liftIO $ F.print "⇒ {}…\n" (F.Only $ unwords (show <$> xs))
+spitList xs = liftIO $ F.print "⇒ {}…\n" (F.Only $ unwords (pFloat <$> xs))
+
+pFloat :: Double -> String
+pFloat x = if f == 0 then show i else show x
+    where (i, f) = properFraction x :: (Int, Double)

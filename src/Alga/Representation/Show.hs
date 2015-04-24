@@ -32,6 +32,7 @@ import Data.List (intersperse)
 import Data.Monoid ((<>))
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Builder as T (Builder, fromString, toLazyText)
+import qualified Data.Text.Lazy.Builder.Int as T (decimal)
 import qualified Data.Text.Lazy.Builder.RealFloat as T (realFloat)
 
 import Alga.Language.Element
@@ -66,12 +67,12 @@ showSyntaxTree' t = cm f t <> "\n"
       p x@(Reference _) = f x
       p x@(Range   _ _) = f x
       p x               = "(" <> f x <> ")"
-      f (Value       x) = T.realFloat x
+      f (Value       x) = pFloat x
       f (Section     x) = "[" <> cm f x <> "]"
       f (Multi       x) = "{" <> cm f x <> "}"
       f (CMulti      x) = "{" <> cm (c *** cm f >>> uncurry (<>)) x <> "}"
       f (Reference   x) = T.fromString x
-      f (Range x y) = T.realFloat x <> T.fromString B.rangeOp <> T.realFloat y
+      f (Range     x y) = pFloat x <> T.fromString B.rangeOp <> pFloat y
       f (Product   x y) = p x <> pad B.productOp   <> p y
       f (Division  x y) = p x <> pad B.divisionOp  <> p y
       f (Sum       x y) = p x <> pad B.sumOp       <> p y
@@ -90,3 +91,7 @@ toSyntaxTree = (f <$>)
 
 pad :: String -> T.Builder
 pad op = " " <> T.fromString op <> " "
+
+pFloat :: Double -> T.Builder
+pFloat x = if f == 0 then T.decimal i else T.realFloat x
+    where (i, f) = properFraction x :: (Int, Double)
