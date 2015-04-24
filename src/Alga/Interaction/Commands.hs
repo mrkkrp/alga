@@ -164,7 +164,11 @@ cmdMake' arg =
 cmdMake :: Int -> Double -> String -> AlgaIO ()
 cmdMake s b f = do
   file   <- output f "xml"
-  liftEnv $ patchAuto s b file cubaseBackend
+  status <- liftEnv $ patchAuto s b file cubaseBackend
+  let msg = if status == 0
+            then "File patched sucessfully \"{}\".\n"
+            else "Failed to patch file \"{}\".\n"
+  liftIO $ F.print msg (F.Only file)
 
 cmdLength :: String -> AlgaIO ()
 cmdLength x = getPrevLen >>= setPrevLen . parseNum x

@@ -33,7 +33,6 @@ module Alga.Translation.Base
     , patchAuto )
 where
 
-import Control.Monad
 import Control.Monad.IO.Class
 import Data.List (nub, isSuffixOf)
 import qualified Data.Map.Lazy as M
@@ -62,13 +61,18 @@ topDefs = filter f <$> getRefs
     where f x = any (`isSuffixOf` x) topRefSuffixes
 
 patchAuto :: MonadIO m => Int -> Double -> FilePath ->
-             (AutoMap -> IOSArrow XmlTree XmlTree) -> AlgaEnv m ()
+             (AutoMap -> IOSArrow XmlTree XmlTree) -> AlgaEnv m Int
 patchAuto s b file exec = do
   setRandGen s
   refs <- nub . (>>= topRef) <$> getRefs
   amap <- M.fromList <$> mapM (makeBatch b) refs
-  liftIO . void . runX $ readDocument [] file >>>
-         exec amap >>> writeDocument [withIndent yes] file >>> errorMsgStderr
+  [status] <- liftIO . runX $
+              readDocument [] file
+              >>> exec amap
+              >>> writeDocument [withIndent yes] file
+              >>> errorMsgStderr
+              >>> getErrStatus
+  return status
 
 makeBatch :: Monad m => Double -> String -> AlgaEnv m (String, AutoBatch)
 makeBatch b t = do
