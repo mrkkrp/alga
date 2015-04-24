@@ -37,7 +37,7 @@ data Opts = Opts
     { opInterac :: Bool
     , opSeed    :: Int
     , opBeats   :: Double
-    , opOutput  :: String
+    , opTarget  :: String
     , opLicense :: Bool
     , opVersion :: Bool
     , opFiles   :: [String] }
@@ -51,8 +51,8 @@ main = execParser opts >>= f
                  , opFiles   = ns   } = g $ cmdLoad ns >> interaction version
           f Opts { opSeed    = s
                  , opBeats   = b
-                 , opOutput  = out
-                 , opFiles   = ns   } = g $ cmdLoad ns >> cmdMake s b out
+                 , opTarget  = trg
+                 , opFiles   = ns   } = g $ cmdLoad ns >> cmdMake s b trg
           g x     = T.putStrLn notice >> runAlga x
           version = "0.1.0"
 
@@ -128,15 +128,15 @@ options = Opts
   <> value dfltBeats
   <> help ("Set total time in whole notes, default is " ++ show dfltBeats) )
   <*> strOption
-  ( long "output"
-  <> short 'o'
+  ( long "target"
+  <> short 't'
   <> metavar "OUT"
   <> value ""
-  <> help "Set name of output file" )
+  <> help "Specify target XML file for patching" )
   <*> switch
   ( long "license"
-  <> help "Show license of the program." )
+  <> help "Show license of the program" )
   <*> switch
   ( long "version"
-  <> help "Show version of the program." )
+  <> help "Show version of the program" )
   <*> many (strArgument $ metavar "FILES")
