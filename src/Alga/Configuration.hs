@@ -48,9 +48,6 @@ instance Parsable String where
 instance Parsable Int where
     parseValue = parseNum
 
-instance Parsable Double where
-    parseValue = parseNum
-
 instance Parsable Bool where
     parseValue "true"  = Just True
     parseValue "false" = Just False
