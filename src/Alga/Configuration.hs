@@ -26,9 +26,9 @@ module Alga.Configuration
     , lookupCfg )
 where
 
-import Data.Char (isDigit, isSpace)
+import Data.Char (isSpace)
 import Data.Functor.Identity
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, listToMaybe)
 import qualified Data.Map as M
 import qualified Data.Text.Lazy as T
 
@@ -39,17 +39,17 @@ import qualified Text.Parsec.Token as Token
 
 type Params = M.Map String String
 
-class Parsable a where
+class Read a => Parsable a where
     parseValue :: String -> Maybe a
 
 instance Parsable String where
     parseValue = Just
 
 instance Parsable Int where
-    parseValue x
-        | null x        = Nothing
-        | all isDigit x = Just $ read x
-        | otherwise     = Nothing
+    parseValue = parseNum
+
+instance Parsable Double where
+    parseValue = parseNum
 
 instance Parsable Bool where
     parseValue "true"  = Just True
@@ -102,3 +102,6 @@ lexeme = Token.lexeme lexer
 
 whiteSpace :: Parser ()
 whiteSpace = Token.whiteSpace lexer
+
+parseNum :: (Num a, Read a) => String -> Maybe a
+parseNum = fmap fst . listToMaybe . reads

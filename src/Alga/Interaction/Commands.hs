@@ -30,9 +30,10 @@ where
 
 import Control.Exception (SomeException, try)
 import Control.Monad.IO.Class
-import Data.Char (isDigit, isSpace)
+import Data.Char (isSpace)
 import Data.Foldable (find)
 import Data.List (elemIndex, isPrefixOf)
+import Data.Maybe (fromMaybe, listToMaybe)
 import System.Directory
     ( canonicalizePath
     , doesDirectoryExist
@@ -156,8 +157,8 @@ loadOne given = do
 cmdMake' :: String -> AlgaIO ()
 cmdMake' arg =
     let (s:b:f:_) = words arg ++ repeat ""
-    in cmdMake (parseInt   s dfltSeed)
-               (parseFloat b dfltBeats)
+    in cmdMake (parseNum s dfltSeed)
+               (parseNum b dfltBeats)
                f
 
 cmdMake :: Int -> Double -> String -> AlgaIO ()
@@ -170,7 +171,7 @@ cmdMake s b f = undefined -- do
   --   Left  e -> spitExc e
 
 cmdLength :: String -> AlgaIO ()
-cmdLength x = getPrevLen >>= setPrevLen . parseInt x
+cmdLength x = getPrevLen >>= setPrevLen . parseNum x
 
 cmdPurge :: String -> AlgaIO ()
 cmdPurge _ = undefined -- do
@@ -199,14 +200,8 @@ cmdUdef arg = mapM_ f (words arg)
             liftEnv (remDef name)
             liftIO (F.print "Definition for '{}' removed.\n" (F.Only name))
 
-parseInt :: String -> Int -> Int
-parseInt s x
-    | null s        = x
-    | all isDigit s = read s :: Int
-    | otherwise     = x
-
-parseFloat :: String -> Double -> Double
-parseFloat s x = undefined
+parseNum :: (Num a, Read a) => String -> a -> a
+parseNum s x = fromMaybe x $ fst <$> listToMaybe (reads s)
 
 output :: String -> String -> AlgaIO String
 output given ext = do
