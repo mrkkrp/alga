@@ -170,9 +170,10 @@ cmdLength :: String -> AlgaIO ()
 cmdLength x = getPrevLen >>= setPrevLen . parseNum x
 
 cmdPurge :: String -> AlgaIO ()
-cmdPurge _ = undefined -- do
-  -- liftEnv $ purgeEnv topDefs
-  -- liftIO $ T.putStrLn "Environment purged."
+cmdPurge _ = do
+  defs <- liftEnv topDefs
+  liftEnv $ purgeEnv defs
+  liftIO $ T.putStrLn "Environment purged."
 
 cmdPwd :: String -> AlgaIO ()
 cmdPwd _ = liftIO (getCurrentDirectory >>= putStrLn)
