@@ -19,7 +19,8 @@
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
 module Alga.Translation
-    ( patchAuto
+    ( topDefs
+    , patchAuto
     , cubaseBackend
     , ardourBackend )
 where

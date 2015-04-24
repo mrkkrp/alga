@@ -29,12 +29,13 @@ module Alga.Translation.Base
     , abIGain
     , atVal
     , atDur
+    , topDefs
     , patchAuto )
 where
 
 import Control.Monad
 import Control.Monad.IO.Class
-import Data.List (nub)
+import Data.List (nub, isSuffixOf)
 import qualified Data.Map.Lazy as M
 import qualified Data.Set as S
 
@@ -55,6 +56,10 @@ data AutoTrack = AutoTrack
     , atDur :: [Double] }
 
 type AutoSet = S.Set String
+
+topDefs :: Monad m => AlgaEnv m [String]
+topDefs = filter f <$> getRefs
+    where f x = any (`isSuffixOf` x) topRefSuffixes
 
 patchAuto :: MonadIO m => Int -> Double -> FilePath ->
              (AutoMap -> IOSArrow XmlTree XmlTree) -> AlgaEnv m ()
@@ -94,12 +99,8 @@ slice b AutoTrack { atVal = val, atDur = dur } =
           f !i !a (x:xs) = if x + a >= b then succ i else f (succ i) (x + a) xs
 
 topRef :: String -> [String]
-topRef name = [t | a `S.member` topRefSuffix]
-    where (t, a) = break (== autoDel) >>> second tail' $ name
-
-tail' :: [a] -> [a]
-tail' [] = []
-tail' xs = tail xs
+topRef name = [t | a `S.member` topRefSuffixes]
+    where (t, a) = break (== autoDel) name
 
 atnVolume :: String
 atnVolume = "volume"
@@ -113,5 +114,6 @@ atnIGain = "igain"
 durSuffix :: String
 durSuffix = "d"
 
-topRefSuffix :: AutoSet
-topRefSuffix = S.fromList [atnVolume,atnMute,atnIGain]
+topRefSuffixes :: AutoSet
+topRefSuffixes = S.map (autoDel:) (S.fromList raw)
+    where raw = [atnVolume,atnMute,atnIGain] >>= \x -> [x, x ++ durSuffix]
