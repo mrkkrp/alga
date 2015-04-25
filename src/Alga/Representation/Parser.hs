@@ -29,6 +29,7 @@ where
 import Control.Monad (void)
 import Data.Functor.Identity
 import Data.List (nub)
+import Data.Ratio ((%))
 import qualified Data.Text.Lazy as T
 
 import Text.Parsec
@@ -89,13 +90,13 @@ pElement
    <?> "element"
 
 pRange :: Parser Sel
-pRange = Range <$> pFloat <* reservedOp B.rangeOp <*> pFloat
+pRange = Range <$> pLiteral <* reservedOp B.rangeOp <*> pLiteral
 
 pValue :: Parser Sel
-pValue = Value <$> pFloat
+pValue = Value <$> pLiteral
 
-pFloat :: Parser Double
-pFloat = try float <|> fromIntegral <$> natural <?> "literal value"
+pLiteral :: Parser Rational
+pLiteral = rational <?> "literal value"
 
 pReference :: Parser Sel
 pReference = Reference <$> identifier <* notFollowedBy (reservedOp B.defOp)
@@ -167,11 +168,8 @@ comma = void $ Token.comma lexer
 identifier :: Parser String
 identifier = Token.identifier lexer
 
-float :: Parser Double
-float = Token.float lexer
-
-natural :: Parser Integer
-natural = Token.natural lexer
+rational :: Parser Rational
+rational = (% 1) <$> Token.natural lexer
 
 parens :: Parser a -> Parser a
 parens = Token.parens lexer

@@ -40,7 +40,7 @@ import Alga.Language.Element
 import Alga.Language.Environment
 
 data CalcSt = CalcSt
-    { clcHistory :: [Double]
+    { clcHistory :: [Rational]
     , clcRandGen :: PureMT }
 
 newtype Calc a = Calc
@@ -50,14 +50,14 @@ newtype Calc a = Calc
              , Monad
              , MonadState CalcSt )
 
-evalDef :: Monad m => String -> AlgaEnv m [Double]
+evalDef :: Monad m => String -> AlgaEnv m [Rational]
 evalDef name = getPrin name >>= eval
 
-eval :: Monad m => SyntaxTree -> AlgaEnv m [Double]
+eval :: Monad m => SyntaxTree -> AlgaEnv m [Rational]
 eval tree = liftM2 runCalc (resolve . cycle' <$> toPrin tree) newRandGen
     where cycle' p = if null $ foldMap (:[]) (Sec p) then [] else cycle p
 
-resolve :: Principle -> Calc [Double]
+resolve :: Principle -> Calc [Rational]
 resolve [] = return []
 resolve xs = concat <$> mapM f xs
     where f (Val  x) = addHistory x >> return [x]
@@ -78,7 +78,7 @@ choice xs = do
   modify $ \c -> c { clcRandGen = g }
   return . Just $ xs !! (abs n `rem` length xs)
 
-condMatch :: [Double] -> Elt -> Bool
+condMatch :: [Rational] -> Elt -> Bool
 condMatch []    _        = False
 condMatch (h:_) (Val  x) = h == x
 condMatch hs    (Sec  x) = and $ zipWith condMatch (tails hs) (reverse x)
@@ -93,7 +93,7 @@ matchHistory x = do
   hs <- clcHistory <$> get
   return . or $ condMatch hs <$> x
 
-addHistory :: Double -> Calc ()
+addHistory :: Rational -> Calc ()
 addHistory x = modify $ \c -> c { clcHistory = return x <> clcHistory c }
 
 toPrin :: Monad m => SyntaxTree -> AlgaEnv m Principle
@@ -127,7 +127,7 @@ toPrin' = liftM concat . mapM f
       f (Reference  x) = getPrin x >>= toPrin'
       f (Range    x y) = return $ Val <$> if x > y then [x,x-1..y] else [x..y]
       f (Product  x y) = adb (\a b -> [(*) <$> a <*> b]) <$> f x <*> f y
-      f (Division x y) = adb (\a b -> [(/) <$> a <*> b]) <$> f x <*> f y
+      f (Division x y) = adb (\a b -> [sdiv <$> a <*> b]) <$> f x <*> f y
       f (Sum      x y) = adb (\a b -> [(+) <$> a <*> b]) <$> f x <*> f y
       f (Diff     x y) = adb (\a b -> [sdif <$> a <*> b]) <$> f x <*> f y
       f (Loop     x y) = adb loop <$> f x <*> f y
@@ -139,7 +139,11 @@ toPrin' = liftM concat . mapM f
       adu _ []         = []
       adu g (x:xs)     = g x : xs
 
-sdif :: Double -> Double -> Double
+sdiv :: Rational -> Rational -> Rational
+sdiv x 0 = x
+sdiv x y = x / y
+
+sdif :: Rational -> Rational -> Rational
 sdif x y
     | x < y     = 0
     | otherwise = x - y

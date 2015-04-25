@@ -35,6 +35,7 @@ where
 
 import Control.Monad.IO.Class
 import Data.List (nub, isSuffixOf)
+import Data.Ratio (numerator, denominator)
 import qualified Data.Map.Lazy as M
 import qualified Data.Set as S
 
@@ -89,8 +90,8 @@ evalTrack :: Monad m => Double -> String -> String -> AlgaEnv m (Maybe AutoTrack
 evalTrack b t a = do
   let valRef = t ++ [autoDel] ++ a
       durRef = valRef ++ durSuffix
-  val <- evalDef valRef
-  dur <- evalDef durRef
+  val <- fmap toFloat <$> evalDef valRef
+  dur <- fmap toFloat <$> evalDef durRef
   return $ if null val || null dur
            then Nothing
            else Just $ slice b AutoTrack { atVal = val, atDur = dur }
@@ -121,3 +122,8 @@ durSuffix = "d"
 topRefSuffixes :: AutoSet
 topRefSuffixes = S.map (autoDel:) (S.fromList raw)
     where raw = [atnVolume,atnMute,atnIGain] >>= \x -> [x, x ++ durSuffix]
+
+toFloat :: Rational -> Double
+toFloat x = n / d
+    where n = fromIntegral $ numerator   x
+          d = fromIntegral $ denominator x

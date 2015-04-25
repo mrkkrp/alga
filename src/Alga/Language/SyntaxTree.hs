@@ -25,12 +25,12 @@ where
 type SyntaxTree = [Sel]
 
 data Sel -- syntactic element
-    = Value     Double
+    = Value     Rational
     | Section   [Sel]
     | Multi     [Sel]
     | CMulti    [([Sel], [Sel])]
     | Reference String
-    | Range     Double Double
+    | Range     Rational Rational
     | Product   Sel Sel
     | Division  Sel Sel
     | Sum       Sel Sel

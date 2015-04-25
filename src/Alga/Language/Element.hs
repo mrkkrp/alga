@@ -30,7 +30,7 @@ where
 import Control.Arrow ((***))
 
 type Principle = [Elt]
-type Elt       = Element Double
+type Elt       = Element Rational
 
 data Element a
     = Val  a
