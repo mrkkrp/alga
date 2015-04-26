@@ -31,6 +31,7 @@ module Main (main) where
 
 import Control.Arrow ((&&&), (>>>))
 import Data.Char (isLetter, isAlphaNum)
+import Data.Ratio ((%))
 
 import Test.Framework (defaultMain, testGroup, Test)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -74,7 +75,7 @@ arbitrarySel 0 =
     oneof [ Value     <$> positive
           , Reference <$> alphaNumIdentifier
           , Range     <$> positive <*> positive ]
-    where positive = arbitrary `suchThat` (>= 0)
+    where positive = (% 1) <$> arbitrary `suchThat` (>= 0)
 arbitrarySel n =
     oneof [ Section  <$> listSel
           , Multi    <$> listSel
@@ -96,6 +97,7 @@ arbitrarySel n =
 
 alphaNumIdentifier :: Gen String
 alphaNumIdentifier = (:) <$> ch0 <*> chN
-    where ch0 = arbitrary `suchThat` spunctOr isLetter
-          chN = arbitrary `suchThat` all (spunctOr isAlphaNum)
-          spunctOr f x = x == '_' || x == autoDel || f x
+    where ch0 = arbitrary `suchThat` ch0p
+          chN = arbitrary `suchThat` all chNp
+          ch0p x = any ($ x) [(== '_'), isLetter]
+          chNp x = any ($ x) [(== '_'), (== autoDel), isAlphaNum]
