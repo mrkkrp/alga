@@ -73,13 +73,14 @@ showSyntaxTree' t = cm f t <> "\n"
       f (CMulti      x) = "{" <> cm (c *** cm f >>> uncurry (<>)) x <> "}"
       f (Reference   x) = T.fromString x
       f (Range     x y) = pRational x <> T.fromString B.rangeOp <> pRational y
-      f (Product   x y) = p x <> pad B.productOp   <> p y
-      f (Division (Value x) (Value y)) = pRational (x / y)
-      f (Division  x y) = p x <> pad B.divisionOp  <> p y
-      f (Sum       x y) = p x <> pad B.sumOp       <> p y
-      f (Diff      x y) = p x <> pad B.diffOp      <> p y
-      f (Loop      x y) = p x <> pad B.loopOp      <> p y
-      f (Rotation  x y) = p x <> pad B.rotationOp  <> p y
+      f (Product   x y) = f x <> pad B.productOp   <> p y
+      f (Division x@(Value _) y@(Value _)) =
+          f x <> T.fromString B.divisionOp  <> p y
+      f (Division  x y) = f x <> pad B.divisionOp  <> p y
+      f (Sum       x y) = f x <> pad B.sumOp       <> p y
+      f (Diff      x y) = f x <> pad B.diffOp      <> p y
+      f (Loop      x y) = f x <> pad B.loopOp      <> p y
+      f (Rotation  x y) = f x <> pad B.rotationOp  <> p y
       f (Reverse     x) = T.fromString B.reverseOp <> p x
       c xs              = "<" <> cm f xs <> "> "
 
