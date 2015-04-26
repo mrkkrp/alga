@@ -50,7 +50,7 @@ trackName = alt ofClass cs /> ofClass "MListNode" /> getStr "Name"
     where cs = ["MAudioTrackEvent","MInstrumentTrackEvent","MDeviceTrackEvent"]
 
 alt :: ArrowXml a => (b -> a XmlTree XmlTree) -> [b] -> a XmlTree XmlTree
-alt a = foldr ((<+>) . a) this
+alt a = foldr ((<+>) . a) none
 
 inClass :: ArrowXml a => String -> a XmlTree XmlTree -> a XmlTree XmlTree
 inClass cls action = processChildren $ action `when` ofClass cls
