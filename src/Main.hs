@@ -65,7 +65,7 @@ notice =
 
 license :: T.Text
 license =
-    "ALGA - algorithmic automation for various DAWs.\n\
+    "ALGA — algorithmic automation for various DAWs.\n\
     \Copyright © 2015 Mark Karpov\n\
     \\n\
     \ALGA is free software: you can redistribute it and/or modify it under the\n\
@@ -107,7 +107,7 @@ opts :: ParserInfo Opts
 opts =  info (helper <*> options)
       ( fullDesc
      <> progDesc "starts ALGA interpreter or patches given XML file"
-     <> header "alga - algorithmic automation for various DAWs" )
+     <> header "alga — algorithmic automation for various DAWs" )
 
 options :: Parser Opts
 options = Opts
