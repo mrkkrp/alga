@@ -17,7 +17,7 @@
 -- You should have received a copy of the GNU General Public License along
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
-{-# LANGUAGE Arrows #-}
+-- {-# LANGUAGE Arrows #-}
 
 module Alga.Translation.Cubase (cubaseBackend) where
 
@@ -32,31 +32,53 @@ import Alga.Translation.Base
 infixr 5 />/
 
 cubaseBackend :: AutoMap -> IOSArrow XmlTree XmlTree
-cubaseBackend m = "tracklist" />/ "list" />/ "obj" />/ procTrack m
+cubaseBackend m = "tracklist" />/ inList "track" ("obj" />/ procTrack m)
 
-procTrack :: (ArrowXml a, ArrowChoice a) => AutoMap -> a XmlTree XmlTree
-procTrack m = (trackName >>> arr (`M.lookup` m)) &&& this >>>
-             proc (x, tree) ->
-                  case x of
-                    Nothing -> this     -< tree
-                    Just b  -> procAuto -< (b, tree)
+procTrack :: ArrowXml a => AutoMap -> a XmlTree XmlTree
+procTrack m = maybe' (inClass "MAutomationNode" . procAuto)
+              $< (trackName >>> arr (`M.lookup` m))
 
-procAuto :: ArrowXml a => a (AutoBatch, XmlTree) XmlTree
-procAuto = arr snd >>> inClass "MAutomationNode"
-           (replaceChildren $ txt "Hello, Cubase!")
+procAuto :: ArrowXml a => AutoBatch -> a XmlTree XmlTree
+procAuto b = setInt "Expanded" 1 >>> inList "Tracks" events
+    where events = maybe' volumeEvent (abVolume b) >>>
+                   maybe' muteEvent   (abMute   b) >>>
+                   maybe' igainEvent  (abIGain  b)
+
+volumeEvent :: ArrowXml a => AutoTrack -> a XmlTree XmlTree
+volumeEvent _ = this -- fix me
+
+muteEvent :: ArrowXml a => AutoTrack -> a XmlTree XmlTree
+muteEvent _ = this -- fix me
+
+igainEvent :: ArrowXml a => AutoTrack -> a XmlTree XmlTree
+igainEvent _ = this -- fix me
 
 trackName :: ArrowXml a => a XmlTree String
-trackName = alt ofClass cs /> ofClass "MListNode" /> getStr "Name"
+trackName = alt isClass cs /> isClass "MListNode" /> getStr "Name"
     where cs = ["MAudioTrackEvent","MInstrumentTrackEvent","MDeviceTrackEvent"]
+
+maybe' :: ArrowXml a => (b -> a XmlTree XmlTree) -> Maybe b -> a XmlTree XmlTree
+maybe' = maybe this
 
 alt :: ArrowXml a => (b -> a XmlTree XmlTree) -> [b] -> a XmlTree XmlTree
 alt a = foldr ((<+>) . a) none
 
-inClass :: ArrowXml a => String -> a XmlTree XmlTree -> a XmlTree XmlTree
-inClass cls action = processChildren $ action `when` ofClass cls
+inList :: ArrowXml a => String -> a XmlTree XmlTree -> a XmlTree XmlTree
+inList name action = processChildren $ action `when` isList name
 
-ofClass :: ArrowXml a => String -> a XmlTree XmlTree
-ofClass cls = isElem >>> hasName "obj" >>> hasAttrValue "class" (== cls)
+isList :: ArrowXml a => String -> a XmlTree XmlTree
+isList name = isElem >>> hasName "list" >>> hasAttrValue "name" (== name)
+
+inClass :: ArrowXml a => String -> a XmlTree XmlTree -> a XmlTree XmlTree
+inClass cls action = processChildren $ action `when` isClass cls
+
+isClass :: ArrowXml a => String -> a XmlTree XmlTree
+isClass cls = isElem >>> hasName "obj" >>> hasAttrValue "class" (== cls)
+
+setInt :: ArrowXml a => String -> Int -> a XmlTree XmlTree
+setInt name val = processChildren $ setVal `when` rightInt
+    where setVal   = addAttr "value" (show val)
+          rightInt = isElem >>> hasName "int" >>> hasAttrValue "name" (== name)
 
 getStr :: ArrowXml a => String -> a XmlTree String
 getStr name = isElem >>> hasName "string" >>>
