@@ -22,13 +22,8 @@
 
 module Alga.Translation.Base
     ( AutoMap
-    , AutoBatch
-    , AutoTrack
-    , abVolume
-    , abMute
-    , abIGain
-    , atVal
-    , atDur
+    , AutoBatch (..)
+    , AutoTrack (..)
     , topDefs
     , patchAuto )
 where
