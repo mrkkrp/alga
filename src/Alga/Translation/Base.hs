@@ -25,7 +25,8 @@ module Alga.Translation.Base
     , AutoBatch (..)
     , AutoTrack (..)
     , topDefs
-    , patchAuto )
+    , patchAuto
+    , totalDur )
 where
 
 import Control.Monad.IO.Class
@@ -69,6 +70,9 @@ patchAuto s b file exec = do
               >>> errorMsgStderr
               >>> getErrStatus
   return status
+
+totalDur :: AutoTrack -> Double
+totalDur AutoTrack { atDur = dur } = sum dur
 
 makeBatch :: Monad m => Double -> String -> AlgaEnv m (String, AutoBatch)
 makeBatch b t = do

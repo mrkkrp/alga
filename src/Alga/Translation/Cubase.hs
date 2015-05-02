@@ -20,6 +20,7 @@
 module Alga.Translation.Cubase (cubaseBackend) where
 
 import Control.Arrow
+import Data.Foldable (foldl')
 import qualified Data.Map.Lazy as M
 
 import Control.Arrow.ArrowTree
@@ -28,10 +29,9 @@ import Text.XML.HXT.Core
 import Alga.Translation.Base
 
 -- TODO:
--- process fields of ‘AutoTrack’ before writing them into document
--- specify ‘Length’
 -- specify ‘Tempo Track’
 -- specify ‘Signature Track’
+-- find out right multiplier to fix range of values (gain and volume)
 -- generate IDs (won't fix if it works without them)
 
 cubaseBackend :: AutoMap -> IOSArrow XmlTree XmlTree
@@ -48,20 +48,20 @@ procAuto b = setInt "Expanded" 1 >>> inList "Tracks" (replaceChildren  events)
                    maybe' igainEvent  (abIGain  b)
 
 volumeEvent :: ArrowXml a => AutoTrack -> a XmlTree XmlTree
-volumeEvent = addEvent 1025 4
+volumeEvent = addEvent 1025 4 . fixRange
 
 muteEvent :: ArrowXml a => AutoTrack -> a XmlTree XmlTree
 muteEvent = addEvent 1027 5
 
 igainEvent :: ArrowXml a => AutoTrack -> a XmlTree XmlTree
-igainEvent = addEvent 4099 4
+igainEvent = addEvent 4099 4 . fixRange
 
 addEvent :: ArrowXml a => Int -> Int -> AutoTrack -> a XmlTree XmlTree
 addEvent tag flags t =
     mkObj (Just "MAutomationTrackEvent") Nothing
               [ mkInt   "Flags"  32
               , mkFloat "Start"  0
-              , mkFloat "Length" 576000 -- ← here
+              , mkFloat "Length" (durFactor * totalDur t)
               , mkObj (Just "MAutoListNode") (Just "Node")
                 [ mkMember "Domain"
                   [ mkInt "Type" 0
@@ -77,9 +77,17 @@ addEvent tag flags t =
               , mkInt "TrackFlags" flags ]
 
 genEvents :: ArrowXml a => AutoTrack -> [a XmlTree XmlTree]
-genEvents AutoTrack { atVal = val, atDur = dur } = zipWith f val dur
+genEvents AutoTrack { atVal = val, atDur = dur } = zipWith f val (fixDur dur)
     where f v d = mkObj (Just "MParamEvent") Nothing
                   [mkFloat "Start" d, mkFloat "Value" v]
+
+fixRange :: AutoTrack -> AutoTrack -- ← here
+fixRange AutoTrack { atVal = val, atDur = dur} = AutoTrack (id <$> val) dur
+
+fixDur :: [Double] -> [Double]
+fixDur = fmap (* durFactor) . reverse . tail . foldl' f []
+    where f []       a = [a,0]
+          f xs@(x:_) a = x + a : xs
 
 mkObj :: ArrowXml a => Maybe String -> Maybe String -> [a XmlTree XmlTree] ->
          a XmlTree XmlTree
@@ -137,3 +145,6 @@ infixr 5 />/
 
 (/>/) :: ArrowXml a => String -> a XmlTree XmlTree -> a XmlTree XmlTree
 name />/ action = processChildren $ action `when` (isElem >>> hasName name)
+
+durFactor :: Double
+durFactor = 1920
