@@ -29,7 +29,8 @@ import Text.XML.HXT.Core
 import Alga.Translation.Base
 
 cubaseBackend :: AutoMap -> IOSArrow XmlTree XmlTree
-cubaseBackend m = "tracklist" />/ inList "track" ("obj" />/ procTrack m)
+cubaseBackend m = configSysVars [withNoEmptyElemFor ["bin","member"]]
+                  >>> "tracklist" />/ inList "track" ("obj" />/ procTrack m)
 
 procTrack :: ArrowXml a => AutoMap -> a XmlTree XmlTree
 procTrack m = maybe' (inClass "MAutomationNode" . procAuto)

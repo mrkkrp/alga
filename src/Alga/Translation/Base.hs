@@ -64,7 +64,7 @@ patchAuto s b file exec = do
   refs <- nub . (>>= topRef) <$> getRefs
   amap <- M.fromList <$> mapM (makeBatch b) refs
   [status] <- liftIO . runX $
-              readDocument [] file
+              readDocument [withValidate no] file
               >>> exec amap
               >>> writeDocument [withIndent yes] file
               >>> errorMsgStderr
