@@ -130,7 +130,7 @@ options = Opts
   <*> strOption
   ( long "target"
   <> short 't'
-  <> metavar "OUT"
+  <> metavar "TARGET"
   <> value ""
   <> help "Specify target XML file for patching" )
   <*> switch

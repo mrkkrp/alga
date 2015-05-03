@@ -28,12 +28,6 @@ import Text.XML.HXT.Core
 
 import Alga.Translation.Base
 
--- TODO:
--- specify ‘Tempo Track’
--- specify ‘Signature Track’
--- find out right multiplier to fix range of values (gain and volume)
--- generate IDs (won't fix if it works without them)
-
 cubaseBackend :: AutoMap -> IOSArrow XmlTree XmlTree
 cubaseBackend m = "tracklist" />/ inList "track" ("obj" />/ procTrack m)
 
@@ -65,8 +59,8 @@ addEvent tag flags t =
               , mkObj (Just "MAutoListNode") (Just "Node")
                 [ mkMember "Domain"
                   [ mkInt "Type" 0
-                  , mkObj Nothing (Just "Tempo Track") [] -- ← here
-                  , mkObj Nothing (Just "Signature Track") [] ] -- ← here
+                  , mkObj Nothing (Just "Tempo Track") []
+                  , mkObj Nothing (Just "Signature Track") [] ]
                 , mkList "Events" "obj" (genEvents t) ]
               , mkObj (Just "MAutomationTrack") (Just "Track Device")
                 [ mkInt "Connection Type" 2
@@ -81,13 +75,16 @@ genEvents AutoTrack { atVal = val, atDur = dur } = zipWith f val (fixDur dur)
     where f v d = mkObj (Just "MParamEvent") Nothing
                   [mkFloat "Start" d, mkFloat "Value" v]
 
-fixRange :: AutoTrack -> AutoTrack -- ← here
-fixRange AutoTrack { atVal = val, atDur = dur} = AutoTrack (id <$> val) dur
+fixRange :: AutoTrack -> AutoTrack
+fixRange AutoTrack { atVal = val, atDur = dur} = AutoTrack (f <$> val) dur
+    where f = (* 0.78908658027648926)
 
 fixDur :: [Double] -> [Double]
 fixDur = fmap (* durFactor) . reverse . tail . foldl' f []
     where f []       a = [a,0]
           f xs@(x:_) a = x + a : xs
+
+-- Element Creation
 
 mkObj :: ArrowXml a => Maybe String -> Maybe String -> [a XmlTree XmlTree] ->
          a XmlTree XmlTree
@@ -110,15 +107,22 @@ mkFloat = mkNamedVal "float"
 mkNamedVal :: (ArrowXml a, Show b) => String -> String -> b -> a XmlTree XmlTree
 mkNamedVal t n v = mkelem t [sattr "name" n, sattr "value" (show v)] []
 
+-- Get/Set/Access Information
+
 trackName :: ArrowXml a => a XmlTree String
 trackName = alt isClass cs /> isClass "MListNode" /> getStr "Name"
     where cs = ["MAudioTrackEvent","MInstrumentTrackEvent","MDeviceTrackEvent"]
 
-maybe' :: ArrowXml a => (b -> a XmlTree XmlTree) -> Maybe b -> a XmlTree XmlTree
-maybe' = maybe this
+getStr :: ArrowXml a => String -> a XmlTree String
+getStr name = isElem >>> hasName "string" >>>
+              hasAttrValue "name" (== name) >>> getAttrValue "value"
 
-alt :: ArrowXml a => (b -> a XmlTree XmlTree) -> [b] -> a XmlTree XmlTree
-alt a = foldr ((<+>) . a) none
+setInt :: ArrowXml a => String -> Int -> a XmlTree XmlTree
+setInt name val = processChildren $ setVal `when` rightInt
+    where setVal   = addAttr "value" (show val)
+          rightInt = isElem >>> hasName "int" >>> hasAttrValue "name" (== name)
+
+-- Special Primitives
 
 inList :: ArrowXml a => String -> a XmlTree XmlTree -> a XmlTree XmlTree
 inList name action = processChildren $ action `when` isList name
@@ -132,19 +136,18 @@ inClass cls action = processChildren $ action `when` isClass cls
 isClass :: ArrowXml a => String -> a XmlTree XmlTree
 isClass cls = isElem >>> hasName "obj" >>> hasAttrValue "class" (== cls)
 
-setInt :: ArrowXml a => String -> Int -> a XmlTree XmlTree
-setInt name val = processChildren $ setVal `when` rightInt
-    where setVal   = addAttr "value" (show val)
-          rightInt = isElem >>> hasName "int" >>> hasAttrValue "name" (== name)
+maybe' :: ArrowXml a => (b -> a XmlTree XmlTree) -> Maybe b -> a XmlTree XmlTree
+maybe' = maybe this
 
-getStr :: ArrowXml a => String -> a XmlTree String
-getStr name = isElem >>> hasName "string" >>>
-              hasAttrValue "name" (== name) >>> getAttrValue "value"
+alt :: ArrowXml a => (b -> a XmlTree XmlTree) -> [b] -> a XmlTree XmlTree
+alt a = foldr ((<+>) . a) none
 
 infixr 5 />/
 
 (/>/) :: ArrowXml a => String -> a XmlTree XmlTree -> a XmlTree XmlTree
 name />/ action = processChildren $ action `when` (isElem >>> hasName name)
+
+-- Constants
 
 durFactor :: Double
 durFactor = 1920

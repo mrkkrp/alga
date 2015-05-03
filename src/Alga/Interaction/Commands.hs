@@ -226,7 +226,3 @@ cmdPrefix = ":"
 
 spitExc :: SomeException -> AlgaIO ()
 spitExc = liftIO . F.print "× {}.\n" . F.Only . show
-
--- trim :: String -> String
--- trim = f . f
---     where f = reverse . dropWhile isSpace
