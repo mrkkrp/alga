@@ -45,12 +45,13 @@ procAuto :: ArrowXml a => AutoBatch -> a XmlTree XmlTree
 procAuto AutoBatch { abVolume = volume
                    , abMute   = mute
                    , abIGain  = igain }
-    = setInt "Expanded" 1 >>> inList "Tracks" mkEvents
-    where mkEvents = processChildren
-                     (none `when` isClass "MAutomationTrackEvent")
-                     ++= volumeEvent <~ volume
-                     ++= muteEvent   <~ mute
-                     ++= igainEvent  <~ igain
+    = setInt "Expanded" 1 >>> deleteOld += mkTracks
+    where deleteOld = processChildren (none `when` deletable)
+          deletable = isList "Tracks" <+> isClass "MAutomationTrack"
+          mkTracks  = mkList "Tracks" "obj" []
+                      ++= volumeEvent <~ volume
+                      ++= muteEvent   <~ mute
+                      ++= igainEvent  <~ igain
 
 volumeEvent :: ArrowXml a => AutoTrack -> a XmlTree XmlTree
 volumeEvent = addEvent 1025 4 . fixRange
