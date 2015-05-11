@@ -43,9 +43,12 @@ import Alga.Representation (autoDel)
 type AutoMap = M.Map String AutoBatch
 
 data AutoBatch = AutoBatch
-    { abVolume :: Maybe AutoTrack
-    , abMute   :: Maybe AutoTrack
-    , abIGain  :: Maybe AutoTrack }
+    { abVolume :: Maybe AutoTrack , abIns2 :: Maybe AutoTrack
+    , abMute   :: Maybe AutoTrack , abIns3 :: Maybe AutoTrack
+    , abIGain  :: Maybe AutoTrack , abIns4 :: Maybe AutoTrack
+    , abPan    :: Maybe AutoTrack , abIns5 :: Maybe AutoTrack
+    , abIns0   :: Maybe AutoTrack , abIns6 :: Maybe AutoTrack
+    , abIns1   :: Maybe AutoTrack , abIns7 :: Maybe AutoTrack }
 
 data AutoTrack = AutoTrack
     { atVal :: [Double]
@@ -80,10 +83,22 @@ makeBatch b t = do
   volume <- eval' atnVolume
   mute   <- eval' atnMute
   igain  <- eval' atnIGain
+  pan    <- eval' atnPan
+  ins0   <- eval' atnIns0
+  ins1   <- eval' atnIns1
+  ins2   <- eval' atnIns2
+  ins3   <- eval' atnIns3
+  ins4   <- eval' atnIns4
+  ins5   <- eval' atnIns5
+  ins6   <- eval' atnIns6
+  ins7   <- eval' atnIns7
   return (t, AutoBatch
-               { abVolume = volume
-               , abMute   = mute
-               , abIGain  = igain })
+               { abVolume = volume , abIns2 = ins2
+               , abMute   = mute   , abIns3 = ins3
+               , abIGain  = igain  , abIns4 = ins4
+               , abPan    = pan    , abIns5 = ins5
+               , abIns0   = ins0   , abIns6 = ins6
+               , abIns1   = ins1   , abIns7 = ins7 })
 
 evalTrack :: Monad m => Double -> String -> String -> AlgaEnv m (Maybe AutoTrack)
 evalTrack b t a = do
@@ -102,9 +117,24 @@ slice b AutoTrack { atVal = val, atDur = dur } =
           f !i _  []     = i
           f !i !a (x:xs) = if x + a >= b then succ i else f (succ i) (x + a) xs
 
+toFloat :: Rational -> Double
+toFloat x = n / d
+    where n = fromIntegral $ numerator   x
+          d = fromIntegral $ denominator x
+
 topRef :: String -> [String]
 topRef name = [t | a `S.member` topRefSuffixes]
     where (t, a) = break (== autoDel) name
+
+topRefSuffixes :: AutoSet
+topRefSuffixes = S.map (autoDel:) (S.fromList raw)
+    where raw = [ atnVolume , atnIns2
+                , atnMute   , atnIns3
+                , atnIGain  , atnIns4
+                , atnPan    , atnIns5
+                , atnIns0   , atnIns6
+                , atnIns1   , atnIns7 ]
+                >>= \x -> [x, x ++ durSuffix]
 
 atnVolume :: String
 atnVolume = "volume"
@@ -115,14 +145,32 @@ atnMute = "mute"
 atnIGain :: String
 atnIGain = "igain"
 
+atnPan :: String
+atnPan = "pan"
+
+atnIns0 :: String
+atnIns0 = "ins0"
+
+atnIns1 :: String
+atnIns1 = "ins1"
+
+atnIns2 :: String
+atnIns2 = "ins2"
+
+atnIns3 :: String
+atnIns3 = "ins3"
+
+atnIns4 :: String
+atnIns4 = "ins4"
+
+atnIns5 :: String
+atnIns5 = "ins5"
+
+atnIns6 :: String
+atnIns6 = "ins6"
+
+atnIns7 :: String
+atnIns7 = "ins7"
+
 durSuffix :: String
 durSuffix = "d"
-
-topRefSuffixes :: AutoSet
-topRefSuffixes = S.map (autoDel:) (S.fromList raw)
-    where raw = [atnVolume,atnMute,atnIGain] >>= \x -> [x, x ++ durSuffix]
-
-toFloat :: Rational -> Double
-toFloat x = n / d
-    where n = fromIntegral $ numerator   x
-          d = fromIntegral $ denominator x
