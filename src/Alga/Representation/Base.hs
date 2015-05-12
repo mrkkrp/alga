@@ -19,6 +19,7 @@
 
 module Alga.Representation.Base
     ( extremumAlias
+    , panAlias
     , commentLine
     , productOp
     , divisionOp
@@ -34,6 +35,9 @@ where
 
 extremumAlias :: (String, String)
 extremumAlias = ("off", "on")
+
+panAlias :: (String, String, String)
+panAlias = ("L", "C", "R")
 
 commentLine :: String
 commentLine = "#"

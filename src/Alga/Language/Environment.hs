@@ -41,13 +41,14 @@ import Control.Arrow ((***), (>>>))
 import Control.Monad.State.Strict
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
+import Data.Ratio ((%))
 import qualified Data.Map.Strict as M
 import qualified Data.Text.Lazy as T
 
 import System.Random.Mersenne.Pure64
 
 import Alga.Language.SyntaxTree
-import Alga.Representation.Base (extremumAlias)
+import Alga.Representation.Base (extremumAlias, panAlias)
 import Alga.Representation.Show (showDefinition)
 
 data AlgaEnvSt = AlgaEnvSt
@@ -71,8 +72,13 @@ runAlgaEnv e = evalStateT (unAlgaEnv e) AlgaEnvSt
                , stRandGen = pureMT 0 }
 
 defaultDefs :: Defs
-defaultDefs = M.fromList [(a, [Value 0]), (b, [Value 1])]
-    where (a, b) = extremumAlias
+defaultDefs = M.fromList [ (a, [Value 0])
+                         , (b, [Value 1])
+                         , (l, [Value 0])
+                         , (c, [Value (1 % 2)])
+                         , (r, [Value 1]) ]
+    where (a, b)    = extremumAlias
+          (l, c, r) = panAlias
 
 getDefs :: Monad m => AlgaEnv m Defs
 getDefs = stDefs <$> get
