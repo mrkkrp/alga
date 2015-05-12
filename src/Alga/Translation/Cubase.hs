@@ -20,6 +20,7 @@
 module Alga.Translation.Cubase (cubaseBackend) where
 
 import Control.Arrow
+import Data.Char (ord)
 import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe)
 import qualified Data.Map.Lazy as M
@@ -44,7 +45,8 @@ procTrack m = mthis (inClass "MAutomationNode" . procAuto)
 procAuto :: ArrowXml a => AutoBatch -> a XmlTree XmlTree
 procAuto AutoBatch { abVolume = volume
                    , abMute   = mute
-                   , abIGain  = igain }
+                   , abIGain  = igain
+                   , abPan    = pan }
     = setInt "Expanded" 1 >>> deleteOld += mkTracks
     where deleteOld = processChildren (none `when` deletable)
           deletable = isList "Tracks" <+> isClass "MAutomationTrack"
@@ -52,18 +54,23 @@ procAuto AutoBatch { abVolume = volume
                       ++= volumeEvent <~ volume
                       ++= muteEvent   <~ mute
                       ++= igainEvent  <~ igain
+                      ++= panEvent    <~ pan
 
 volumeEvent :: ArrowXml a => AutoTrack -> a XmlTree XmlTree
-volumeEvent = addEvent 1025 4 . fixRange
+volumeEvent = addEvent 1025 4 Nothing . fixRange
 
 muteEvent :: ArrowXml a => AutoTrack -> a XmlTree XmlTree
-muteEvent = addEvent 1027 5
+muteEvent = addEvent 1027 5 Nothing
 
 igainEvent :: ArrowXml a => AutoTrack -> a XmlTree XmlTree
-igainEvent = addEvent 4099 4 . fixRange
+igainEvent = addEvent 4099 4 Nothing . fixRange
 
-addEvent :: ArrowXml a => Int -> Int -> AutoTrack -> a XmlTree XmlTree
-addEvent tag flags t =
+panEvent :: ArrowXml a => AutoTrack -> a XmlTree XmlTree
+panEvent = addEvent 4201 6 (Just "Panner")
+
+addEvent :: ArrowXml a => Int -> Int -> Maybe String ->
+            AutoTrack -> a XmlTree XmlTree
+addEvent tag flags dn t =
     mkObj (Just "MAutomationTrackEvent") na na
               [ mkInt   "Flags"  32
               , mkFloat "Start"  0
@@ -72,21 +79,23 @@ addEvent tag flags t =
                 [ mkMember "Domain"
                   [ mkInt "Type" 0 ]
                 , mkList "Events" "obj" (genEvents t) ]
-              , mkAutoTrack
+              , mkAutoTrack dn
               , mkInt "Height" 42
               , mkInt "Tag"    tag
               , mkInt "TrackFlags" flags ]
 
-mkAutoTrack :: ArrowXml a => a XmlTree XmlTree
-mkAutoTrack = ifA present mkLink mkComplete
-    where present    = deep (isClass "MAutomationTrack")
-          mkComplete = mkObj (Just "MAutomationTrack") name i
-                       [ mkInt "Connection Type" 2
-                       , mkInt "Read" 1
-                       , mkInt "Write" 0 ]
-          mkLink     = mkObj na name i []
-          name       = Just "Track Device"
-          i          = Just "00000013"
+mkAutoTrack :: ArrowXml a => Maybe String -> a XmlTree XmlTree
+mkAutoTrack dn =
+    case dn of
+      Nothing -> ifA (deep isSat) mkLink (mkCmpl 2)
+      Just _  -> mkCmpl 7
+    where mkCmpl ct = mkObj (Just "MAutomationTrack") name (Just (genID dn))
+                      [ mkInt "Connection Type" ct
+                      , mnone (mkString "Device Name") dn
+                      , mkInt "Read" 1
+                      , mkInt "Write" 0 ]
+          mkLink    = mkObj na name (Just satID) []
+          name      = Just "Track Device"
 
 genEvents :: ArrowXml a => AutoTrack -> [a XmlTree XmlTree]
 genEvents AutoTrack { atVal = val, atDur = dur } = zipWith f val (fixDur dur)
@@ -102,6 +111,9 @@ fixDur = fmap (* durFactor) . reverse . tail . foldl' f []
     where f []       a = [a,0]
           f xs@(x:_) a = x + a : xs
 
+genID :: Maybe String -> String
+genID = show . (+ 13) . maybe 0 (sum . zipWith (+) [255,510..] . fmap ord)
+
 -- Element Creation
 
 mkObj :: ArrowXml a => Maybe String -> Maybe String -> Maybe String ->
@@ -109,7 +121,7 @@ mkObj :: ArrowXml a => Maybe String -> Maybe String -> Maybe String ->
 mkObj c n i = mkelem "obj"
               [ mnone (sattr "class") c
               , mnone (sattr "name")  n
-              , sattr "ID" (fromMaybe "00000007" i) ]
+              , sattr "ID" (fromMaybe "7" i) ]
 
 mkMember :: ArrowXml a => String -> [a XmlTree XmlTree] -> a XmlTree XmlTree
 mkMember name = mkelem "member" [sattr "name" name]
@@ -118,14 +130,17 @@ mkList :: ArrowXml a => String -> String -> [a XmlTree XmlTree] ->
           a XmlTree XmlTree
 mkList name t = mkelem "list" [sattr "name" name, sattr "type" t]
 
+mkString :: ArrowXml a => String -> String -> a XmlTree XmlTree
+mkString n v = mkNamedVal "string" n v += sattr "wide" "true"
+
 mkInt :: ArrowXml a => String -> Int -> a XmlTree XmlTree
-mkInt = mkNamedVal "int"
+mkInt n v = mkNamedVal "int" n (show v)
 
 mkFloat :: ArrowXml a => String -> Double -> a XmlTree XmlTree
-mkFloat = mkNamedVal "float"
+mkFloat n v = mkNamedVal "float" n (show v)
 
-mkNamedVal :: (ArrowXml a, Show b) => String -> String -> b -> a XmlTree XmlTree
-mkNamedVal t n v = mkelem t [sattr "name" n, sattr "value" (show v)] []
+mkNamedVal :: ArrowXml a => String -> String -> String -> a XmlTree XmlTree
+mkNamedVal t n v = mkelem t [sattr "name" n, sattr "value" v] []
 
 -- Get/Set/Access Information
 
@@ -143,6 +158,9 @@ setInt name val = processChildren $ setVal `when` rightInt
           rightInt = isElem >>> hasName "int" >>> hasAttrValue "name" (== name)
 
 -- Special Primitives
+
+isSat :: ArrowXml a => a XmlTree XmlTree
+isSat = isClass "MAutomationTrack" >>> hasAttrValue "ID" (== satID)
 
 inList :: ArrowXml a => String -> a XmlTree XmlTree -> a XmlTree XmlTree
 inList name action = processChildren $ action `when` isList name
@@ -182,3 +200,6 @@ na = Nothing
 
 durFactor :: Double
 durFactor = 1920
+
+satID :: String
+satID = genID Nothing
