@@ -22,7 +22,7 @@ module Alga.Translation.Cubase (cubaseBackend) where
 import Control.Arrow
 import Data.Char (ord)
 import Data.Foldable (foldl')
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, listToMaybe)
 import qualified Data.Map.Lazy as M
 
 import Control.Arrow.ArrowTree
@@ -32,17 +32,18 @@ import Alga.Translation.Base
 
 infixl 7 ++=
 infixr 5 />/
+infixl 9 !!!
 
 cubaseBackend :: AutoMap -> IOSArrow XmlTree XmlTree
-cubaseBackend m = configSysVars [withNoEmptyElemFor nonEmptyElts]
-                  >>> "tracklist" />/ inList "track" ("obj" />/ procTrack m)
+cubaseBackend m = configSysVars [withNoEmptyElemFor nonEmptyElts] >>>
+                  "tracklist" />/ inList "track" ("obj" />/ procTrack m)
 
 procTrack :: ArrowXml a => AutoMap -> a XmlTree XmlTree
-procTrack m = mthis (inClass "MAutomationNode" . procAuto)
-              $< (trackName >>> arr (`M.lookup` m))
+procTrack m = mthis editTrack $< (trackName >>> arr (`M.lookup` m))
+    where editTrack b = inClass "MAutomationNode" . procAuto b $< insGuids
 
-procAuto :: ArrowXml a => AutoBatch -> a XmlTree XmlTree
-procAuto batch = setInt "Expanded" 1 >>> deleteOld += mkTracks
+procAuto :: ArrowXml a => AutoBatch -> [String] -> a XmlTree XmlTree
+procAuto batch is   = setInt "Expanded" 1 >>> deleteOld += mkTracks
     where deleteOld = processChildren (none `when` deletable)
           deletable = isList "Tracks" <+> isClass "MAutomationTrack"
           mkTracks  = M.foldlWithKey' f (mkList "Tracks" "obj" []) batch
@@ -53,7 +54,7 @@ procAuto batch = setInt "Expanded" 1 >>> deleteOld += mkTracks
                 Mute        -> muteEvent
                 IGain       -> igainEvent
                 Pan         -> panEvent
-                InsSlot _ _ -> undefined
+                InsSlot n s -> maybe (const none) (`insEvent` s) (genInsDN is n)
                 InstParam _ -> undefined
 
 volumeEvent :: ArrowXml a => AutoTrack -> a XmlTree XmlTree
@@ -68,8 +69,8 @@ igainEvent = addEvent 4099 4 Nothing . fixRange
 panEvent :: ArrowXml a => AutoTrack -> a XmlTree XmlTree
 panEvent = addEvent 4201 6 (Just "Panner")
 
--- insEvent :: ArrowXml a => String -> AutoTrack -> a XmlTree XmlTree
--- insEvent dn = addEvent 4202 4 (Just dn)
+insEvent :: ArrowXml a => String -> Int -> AutoTrack -> a XmlTree XmlTree
+insEvent dn i = addEvent (4200 + i) 4 (Just dn)
 
 addEvent :: ArrowXml a => Int -> Int -> Maybe String ->
             AutoTrack -> a XmlTree XmlTree
@@ -111,6 +112,11 @@ fixDur = fmap (* durFactor) . reverse . tail . foldl' f []
     where f []       a = [a,0]
           f xs@(x:_) a = x + a : xs
 
+genInsDN :: [String] -> Int -> Maybe String
+genInsDN is n = wrap <$> is !!! n
+    where wrap x = concat ["Inserts\\Slot",idx,"\\",x,"-0"]
+          idx    = if n > 0 then " " ++ show (succ n) else ""
+
 genID :: Maybe String -> String
 genID = show . (+ 13) . maybe 0 (sum . zipWith (+) [255,510..] . fmap ord)
 
@@ -148,6 +154,17 @@ trackName :: ArrowXml a => a XmlTree String
 trackName = catA (isClass <$> cs) /> isClass "MListNode" /> getStr "Name"
     where cs = ["MAudioTrackEvent","MInstrumentTrackEvent","MDeviceTrackEvent"]
 
+insGuids :: ArrowXml a => a XmlTree [String]
+insGuids = listA $ getChildren >>>
+           isClass "MAudioTrack"       />
+           isMember "DeviceAttributes" />
+           isMember "InsertFolder"     />
+           isList   "Slot"             />
+           isItem                      />
+           isMember "Plugin"           />
+           isMember "Plugin UID"       />
+           getStr   "GUID"
+
 getStr :: ArrowXml a => String -> a XmlTree String
 getStr name = isElem >>> hasName "string" >>>
               hasAttrValue "name" (== name) >>> getAttrValue "value"
@@ -174,6 +191,12 @@ inClass cls action = processChildren $ action `when` isClass cls
 isClass :: ArrowXml a => String -> a XmlTree XmlTree
 isClass cls = isElem >>> hasName "obj" >>> hasAttrValue "class" (== cls)
 
+isMember :: ArrowXml a => String -> a XmlTree XmlTree
+isMember name = isElem >>> hasName "member" >>> hasAttrValue "name" (== name)
+
+isItem :: ArrowXml a => a XmlTree XmlTree
+isItem = isElem >>> hasName "item"
+
 mthis :: ArrowXml a => (b -> a XmlTree XmlTree) -> Maybe b -> a XmlTree XmlTree
 mthis = maybe this
 
@@ -186,6 +209,9 @@ a ++= b = a += (a >>> b)
 
 (/>/) :: ArrowXml a => String -> a XmlTree XmlTree -> a XmlTree XmlTree
 name />/ action = processChildren $ action `when` (isElem >>> hasName name)
+
+(!!!) :: [a] -> Int -> Maybe a
+xs !!! n = listToMaybe $ drop n xs
 
 -- Constants
 
