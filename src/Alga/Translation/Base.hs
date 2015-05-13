@@ -51,8 +51,9 @@ data AutoType
     | Mute
     | IGain
     | Pan
-    | InsSlot Int Int
-    | InstParam Int
+    | InsertSlot Int Int
+    | SendSlot Int Int
+    | SynthParam Int
     deriving (Show, Eq, Ord)
 
 data AutoTrack = AutoTrack
@@ -122,13 +123,14 @@ autoType :: String -> Maybe AutoType
 autoType i = M.lookup i autoMap
 
 autoMap :: M.Map String AutoType
-autoMap = M.fromList (basicMap ++ insMap ++ instMap)
-    where basicMap = [ ("volume", Volume) , ("igain",  IGain)
-                     , ("mute",   Mute)   , ("pan",    Pan) ]
-          insMap   = [ ("i" ++ show n ++ "_" ++ show s, InsSlot n s)
-                     | n <- [0..7], s <- [0..15] ]
-          instMap  = [ ("inst" ++ show n, InstParam n)
-                     | n <- [0..15] ]
+autoMap = M.fromList (basicMap ++ insertMap ++ sendMap ++ synthMap)
+    where basicMap  = [ ("volume", Volume) , ("igain",  IGain)
+                      , ("mute",   Mute)   , ("pan",    Pan) ]
+          insertMap = [ ("i" ++ show n ++ "_" ++ show s, InsertSlot n s)
+                      | n <- [0..7], s <- [0..99] ]
+          sendMap   = [ ("s" ++ show n ++ "_" ++ show s, SendSlot n s)
+                      | n <- [0..7], s <- [0..9] ]
+          synthMap  = [ ("p" ++ show s, SynthParam s) | s <- [0..99] ]
 
 autoKeys :: [String]
 autoKeys = M.keys autoMap
