@@ -70,4 +70,4 @@ defOp :: String
 defOp = "="
 
 autoDel :: Char
-autoDel = ':'
+autoDel = '.'
