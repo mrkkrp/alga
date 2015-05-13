@@ -18,11 +18,13 @@
 -- You should have received a copy of the GNU General Public License along
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns  #-}
+{-# LANGUAGE TupleSections #-}
 
 module Alga.Translation.Base
     ( AutoMap
-    , AutoBatch (..)
+    , AutoBatch
+    , AutoType (..)
     , AutoTrack (..)
     , topDefs
     , patchAuto
@@ -31,6 +33,7 @@ where
 
 import Control.Monad.IO.Class
 import Data.List (nub, isSuffixOf)
+import Data.Maybe (maybeToList)
 import Data.Ratio (numerator, denominator)
 import qualified Data.Map.Lazy as M
 import qualified Data.Set as S
@@ -40,15 +43,17 @@ import Text.XML.HXT.Core
 import Alga.Language (AlgaEnv, setRandGen, getRefs, evalDef)
 import Alga.Representation (autoDel)
 
-type AutoMap = M.Map String AutoBatch
+type AutoMap   = M.Map String AutoBatch
+type AutoBatch = M.Map AutoType AutoTrack
 
-data AutoBatch = AutoBatch
-    { abVolume :: Maybe AutoTrack , abIns2 :: Maybe AutoTrack
-    , abMute   :: Maybe AutoTrack , abIns3 :: Maybe AutoTrack
-    , abIGain  :: Maybe AutoTrack , abIns4 :: Maybe AutoTrack
-    , abPan    :: Maybe AutoTrack , abIns5 :: Maybe AutoTrack
-    , abIns0   :: Maybe AutoTrack , abIns6 :: Maybe AutoTrack
-    , abIns1   :: Maybe AutoTrack , abIns7 :: Maybe AutoTrack }
+data AutoType
+    = Volume
+    | Mute
+    | IGain
+    | Pan
+    | InsSlot Int Int
+    | InstParam Int
+    deriving (Show, Eq, Ord)
 
 data AutoTrack = AutoTrack
     { atVal :: [Double]
@@ -78,35 +83,18 @@ totalDur :: AutoTrack -> Double
 totalDur AutoTrack { atDur = dur } = sum dur
 
 makeBatch :: Monad m => Double -> String -> AlgaEnv m (String, AutoBatch)
-makeBatch b t = do
-  let eval' = evalTrack b t
-  volume <- eval' atnVolume
-  mute   <- eval' atnMute
-  igain  <- eval' atnIGain
-  pan    <- eval' atnPan
-  ins0   <- eval' atnIns0
-  ins1   <- eval' atnIns1
-  ins2   <- eval' atnIns2
-  ins3   <- eval' atnIns3
-  ins4   <- eval' atnIns4
-  ins5   <- eval' atnIns5
-  ins6   <- eval' atnIns6
-  ins7   <- eval' atnIns7
-  return (t, AutoBatch
-               { abVolume = volume , abIns2 = ins2
-               , abMute   = mute   , abIns3 = ins3
-               , abIGain  = igain  , abIns4 = ins4
-               , abPan    = pan    , abIns5 = ins5
-               , abIns0   = ins0   , abIns6 = ins6
-               , abIns1   = ins1   , abIns7 = ins7 })
+makeBatch b t = (t,) . M.fromList . (>>= maybeToList) <$>
+                mapM (evalTrack b t) autoKeys
 
-evalTrack :: Monad m => Double -> String -> String -> AlgaEnv m (Maybe AutoTrack)
+evalTrack :: Monad m => Double -> String -> String ->
+             AlgaEnv m (Maybe (AutoType, AutoTrack))
 evalTrack b t a = do
   let valRef = t ++ [autoDel] ++ a
       durRef = valRef ++ durSuffix
   val <- fmap toFloat <$> evalDef valRef
   dur <- fmap toFloat <$> evalDef durRef
-  return $ if null val || null dur
+  return $ (,) <$> autoType a <*>
+         if null val || null dur
            then Nothing
            else Just $ slice b AutoTrack { atVal = val, atDur = dur }
 
@@ -128,49 +116,22 @@ topRef name = [t | a `S.member` topRefSuffixes]
 
 topRefSuffixes :: AutoSet
 topRefSuffixes = S.map (autoDel:) (S.fromList raw)
-    where raw = [ atnVolume , atnIns2
-                , atnMute   , atnIns3
-                , atnIGain  , atnIns4
-                , atnPan    , atnIns5
-                , atnIns0   , atnIns6
-                , atnIns1   , atnIns7 ]
-                >>= \x -> [x, x ++ durSuffix]
+    where raw = autoKeys >>= \x -> [x, x ++ durSuffix]
 
-atnVolume :: String
-atnVolume = "volume"
+autoType :: String -> Maybe AutoType
+autoType i = M.lookup i autoMap
 
-atnMute :: String
-atnMute = "mute"
+autoMap :: M.Map String AutoType
+autoMap = M.fromList (basicMap ++ insMap ++ instMap)
+    where basicMap = [ ("volume", Volume) , ("igain",  IGain)
+                     , ("mute",   Mute)   , ("pan",    Pan) ]
+          insMap   = [ ("i" ++ show n ++ "_" ++ show s, InsSlot n s)
+                     | n <- [0..7], s <- [0..15] ]
+          instMap  = [ ("inst" ++ show n, InstParam n)
+                     | n <- [0..15] ]
 
-atnIGain :: String
-atnIGain = "igain"
-
-atnPan :: String
-atnPan = "pan"
-
-atnIns0 :: String
-atnIns0 = "ins0"
-
-atnIns1 :: String
-atnIns1 = "ins1"
-
-atnIns2 :: String
-atnIns2 = "ins2"
-
-atnIns3 :: String
-atnIns3 = "ins3"
-
-atnIns4 :: String
-atnIns4 = "ins4"
-
-atnIns5 :: String
-atnIns5 = "ins5"
-
-atnIns6 :: String
-atnIns6 = "ins6"
-
-atnIns7 :: String
-atnIns7 = "ins7"
+autoKeys :: [String]
+autoKeys = M.keys autoMap
 
 durSuffix :: String
 durSuffix = "d"
