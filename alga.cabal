@@ -69,6 +69,8 @@ library
                    , Alga.Representation.Show
                    , Alga.Translation
   other-modules:     Alga.Representation.Base
+                   , Alga.Translation.Base
+                   , Alga.Translation.Ardour
                    , Alga.Translation.Cubase
   default-language:  Haskell2010
 
