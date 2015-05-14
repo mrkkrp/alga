@@ -23,6 +23,7 @@
 module Alga.Interaction.Commands
     ( processCmd
     , completionFunc
+    , cmdBackend
     , cmdLoad
     , cmdMake
     , cmdPrefix )

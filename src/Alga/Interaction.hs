@@ -26,6 +26,7 @@ module Alga.Interaction
     , runAlgaInt
     , AlgaSt (..)
     , AlgaCfg (..)
+    , cmdBackend
     , cmdLoad
     , cmdMake
     , interaction

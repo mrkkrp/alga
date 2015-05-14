@@ -35,6 +35,7 @@ import Alga.Interaction
 
 data Opts = Opts
     { opInterac :: Bool
+    , opBackend :: String
     , opSeed    :: Int
     , opBeats   :: Double
     , opTarget  :: String
@@ -46,14 +47,18 @@ main :: IO ()
 main = execParser opts >>= f
     where f Opts { opLicense = True } = T.putStr license
           f Opts { opVersion = True } = F.print "ALGA {}\n" (F.Only version)
-          f Opts { opFiles   = []   } = g $ interaction version
+          f Opts { opFiles   = []
+                 , opBackend = β    } = g β $ interaction version
           f Opts { opInterac = True
-                 , opFiles   = ns   } = g $ cmdLoad ns >> interaction version
-          f Opts { opSeed    = s
+                 , opBackend = β
+                 , opFiles   = ns   } = g β $ cmdLoad ns >> interaction version
+          f Opts { opBackend = β
+                 , opSeed    = s
                  , opBeats   = b
                  , opTarget  = trg
-                 , opFiles   = ns   } = g $ cmdLoad ns >> cmdMake s b trg
-          g x     = T.putStrLn notice >> runAlga x
+                 , opFiles   = ns   } = g β $ cmdLoad ns >> cmdMake s b trg
+          g β x   = T.putStrLn notice >> runAlga (ξ β >> x)
+          ξ β     = unless (null β) (cmdBackend β)
           version = "0.1.0"
 
 notice :: T.Text
@@ -117,6 +122,12 @@ options = Opts
   ( long "interactive"
   <> short 'i'
   <> help "Start ALGA in interactive mode" )
+  <*> strOption
+  ( long "backend"
+  <> short 'B'
+  <> metavar "DAW"
+  <> value ""
+  <> help "Specify which backend to use" )
   <*> option auto
   ( long "seed"
   <> short 's'
