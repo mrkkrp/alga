@@ -88,8 +88,9 @@ runAlga e = do
   void $ runAlgaInt e
        AlgaSt { stPrevLen = lookupCfg params "prvlen" 18
               , stSrcFile = lookupCfg params "src"    wdir </> "foo.ga" }
-       AlgaCfg { cfgPrompt  = lookupCfg params "prompt"  "> "
-               , cfgVerbose = lookupCfg params "verbose" True }
+       AlgaCfg { cfgPrecision = lookupCfg params "precision" 0.01
+               , cfgPrompt    = lookupCfg params "prompt"    "> "
+               , cfgVerbose   = lookupCfg params "verbose"   True }
 
 loadConfig :: IO Params
 loadConfig = do

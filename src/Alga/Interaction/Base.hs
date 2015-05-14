@@ -35,20 +35,24 @@ module Alga.Interaction.Base
     , setPrevLen
     , getSrcFile
     , setSrcFile
+    , getPrecision
     , getPrompt
     , getVerbose
     , dfltSeed
     , dfltBeats
-    , processDef )
+    , processDef
+    , pRational)
 where
 
 import Control.Monad.Reader
 import Control.Monad.State.Strict
+import Data.Ratio (numerator, denominator)
 
 import qualified Data.Text.Format as F
 import qualified System.Console.Haskeline as L
 
 import Alga.Language
+import Alga.Representation
 
 type AlgaIO = AlgaInt IO
 
@@ -75,8 +79,9 @@ data AlgaSt = AlgaSt
     , stSrcFile :: String }
 
 data AlgaCfg = AlgaCfg
-    { cfgPrompt  :: String
-    , cfgVerbose :: Bool }
+    { cfgPrecision :: Double
+    , cfgPrompt    :: String
+    , cfgVerbose   :: Bool }
 
 runAlgaInt :: Monad m => AlgaInt m a -> AlgaSt -> AlgaCfg -> m a
 runAlgaInt m st cfg =
@@ -93,6 +98,9 @@ getSrcFile = stSrcFile <$> get
 
 setSrcFile :: String -> AlgaIO ()
 setSrcFile x = modify $ \e -> e { stSrcFile = x }
+
+getPrecision :: AlgaIO Double
+getPrecision = cfgPrecision <$> ask
 
 getPrompt :: AlgaIO String
 getPrompt = cfgPrompt <$> ask
@@ -112,3 +120,10 @@ processDef n t = do
   if recursive
   then liftIO $ F.print "Rejected recursive definition for «{}».\n" (F.Only n)
   else liftEnv (addDef n t) >> liftIO (F.print "• «{}»\n" (F.Only n))
+
+pRational :: Rational -> String
+pRational x = if d == 1
+              then show n
+              else show n ++ divisionOp ++ show d
+    where n = numerator   x
+          d = denominator x

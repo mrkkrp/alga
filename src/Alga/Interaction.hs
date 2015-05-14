@@ -34,7 +34,6 @@ module Alga.Interaction
 where
 
 import Control.Monad.Reader
-import Data.Ratio (numerator, denominator)
 import System.IO
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
@@ -94,10 +93,3 @@ processExpr expr = do
 spitList :: [Rational] -> AlgaIO ()
 spitList [] = liftIO $ T.putStrLn "⇒ ⊥"
 spitList xs = liftIO $ F.print "⇒ {}…\n" (F.Only $ unwords (pRational <$> xs))
-
-pRational :: Rational -> String
-pRational x = if d == 1
-              then show n
-              else show n ++ divisionOp ++ show d
-    where n = numerator   x
-          d = denominator x

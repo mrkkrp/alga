@@ -34,6 +34,7 @@ import Data.Char (isSpace)
 import Data.Foldable (find)
 import Data.List (elemIndex, isPrefixOf)
 import Data.Maybe (fromMaybe, listToMaybe)
+import Data.Ratio (approxRational)
 import System.Directory
     ( canonicalizePath
     , doesDirectoryExist
@@ -66,22 +67,28 @@ data Cmd = Cmd
     , cmdDesc :: T.Text
     , cmdComp :: CompletionScheme }
 
+data Scale = Lin | Log deriving (Eq, Show)
+
 data CompletionScheme = None | Files | Names deriving (Eq, Show)
 
 commands :: [Cmd]
 commands =
-    [ Cmd "cd"      cmdCd      "Change working directory."             Files
-    , Cmd "clear"   cmdClear   "Restore default state of environment." None
-    , Cmd "def"     cmdDef     "Print definition of given symbol."     Names
-    , Cmd "help"    cmdHelp    "Show this help text."                  None
-    , Cmd "load"    cmdLoad'   "Load definitions from given file."     Files
-    , Cmd "make"    cmdMake'   "Patch an XML file."                    Files
-    , Cmd "prvlen"  cmdLength  "Set length of displayed results."      None
-    , Cmd "purge"   cmdPurge   "Remove redundant definitions."         None
-    , Cmd "pwd"     cmdPwd     "Print working directory."              None
-    , Cmd "quit"    cmdQuit    "Quit the interactive environment."     None
-    , Cmd "save"    cmdSave    "Save current environment in file."     Files
-    , Cmd "udef"    cmdUdef    "Remove definition of given symbol."    Names ]
+    [ Cmd "cd"     cmdCd     "Change working directory."              Files
+    , Cmd "clear"  cmdClear  "Restore default state of environment."  None
+    , Cmd "def"    cmdDef    "Print definition of given symbol."      Names
+    , Cmd "help"   cmdHelp   "Show this help text."                   None
+    , Cmd "lin"    cmdLin    "Linear scale conversion to ratio."      None
+    , Cmd "load"   cmdLoad'  "Load definitions from given file."      Files
+    , Cmd "log"    cmdLog    "Logarithmic scale conversion to ratio." None
+    , Cmd "make"   cmdMake'  "Patch an XML file."                     Files
+    , Cmd "prvlen" cmdLength "Set length of displayed results."       None
+    , Cmd "purge"  cmdPurge  "Remove redundant definitions."          None
+    , Cmd "pwd"    cmdPwd    "Print working directory."               None
+    , Cmd "quit"   cmdQuit   "Quit the interactive environment."      None
+    , Cmd "ratio"  cmdRatio  "Real number to ratio converter."        None
+    , Cmd "save"   cmdSave   "Save current environment in file."      Files
+    , Cmd "udef"   cmdUdef   "Remove definition of given symbol."     Names
+    , Cmd "vol"    cmdVol    "Convert decibels to ratio."             None ]
 
 processCmd :: T.Text -> AlgaIO ()
 processCmd txt =
@@ -132,6 +139,10 @@ cmdHelp _ = liftIO (T.putStrLn "Available commands:") >> mapM_ f commands
     where f Cmd { cmdName = c, cmdDesc = d } =
               liftIO $ F.print "  {}{}{}\n" (cmdPrefix, F.right 24 ' ' c, d)
 
+cmdLin :: String -> AlgaIO ()
+cmdLin str = pRatio Lin (parseNum a 0) (parseNum b 1) (parseNum s 0)
+    where (a:b:s:_) = parseArgs str
+
 cmdLoad' :: String -> AlgaIO ()
 cmdLoad' = cmdLoad . words
 
@@ -154,9 +165,14 @@ loadOne given = do
     where f (Definition n t) = processDef n t
           f (Exposition   _) = return ()
 
+cmdLog :: String -> AlgaIO ()
+cmdLog str = pRatio Log (parseNum a 0) (parseNum b e) (parseNum s 0)
+    where (a:b:s:_) = parseArgs str
+          e         = exp 1
+
 cmdMake' :: String -> AlgaIO ()
-cmdMake' arg =
-    let (s:b:f:_) = words arg ++ repeat ""
+cmdMake' str =
+    let (s:b:f:_) = parseArgs str
     in cmdMake (parseNum s dfltSeed)
                (parseNum b dfltBeats)
                f
@@ -185,6 +201,9 @@ cmdPwd _ = liftIO (getCurrentDirectory >>= putStrLn)
 cmdQuit :: String -> AlgaIO ()
 cmdQuit _ = liftIO exitSuccess
 
+cmdRatio :: String -> AlgaIO ()
+cmdRatio = pRatio Lin 0 1 . (`parseNum` 0)
+
 cmdSave :: String -> AlgaIO ()
 cmdSave given = do
   file   <- output given ""
@@ -200,6 +219,22 @@ cmdUdef arg = mapM_ f (words arg)
     where f name = do
             liftEnv (remDef name)
             liftIO (F.print "Definition for '{}' removed.\n" (F.Only name))
+
+cmdVol :: String -> AlgaIO ()
+cmdVol = pRatio Lin 0 1 . dBToRatio . (`parseNum` 0)
+    where dBToRatio dB = 10 ** (dB / 10)
+
+pRatio :: Scale -> Double -> Double -> Double -> AlgaIO ()
+pRatio scale a b s = do
+  ε <- getPrecision
+  let σ = case scale of
+            Lin -> (s - a) / (b - a)
+            Log -> (log s - log a) / (log b - log a)
+      x = approxRational σ ε
+  liftIO $ F.print "≈ {}\n" (F.Only $ pRational x)
+
+parseArgs :: String -> [String]
+parseArgs str = words str ++ repeat ""
 
 parseNum :: (Num a, Read a) => String -> a -> a
 parseNum s x = fromMaybe x $ fst <$> listToMaybe (reads s)
