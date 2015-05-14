@@ -22,10 +22,13 @@ module Alga.Translation
     ( AlgaBackend
     , topDefs
     , patchAuto
-    , ardourBackend
-    , cubaseBackend )
+    , toBackend )
 where
 
 import Alga.Translation.Base
 import Alga.Translation.Ardour
 import Alga.Translation.Cubase
+
+toBackend :: String -> AlgaBackend
+toBackend "ardour" = ardourBackend
+toBackend _        = cubaseBackend

@@ -43,8 +43,7 @@ module Alga.Interaction.Base
     , dfltSeed
     , dfltBeats
     , processDef
-    , pRational
-    , toBackend )
+    , pRational )
 where
 
 import Control.Monad.Reader
@@ -138,7 +137,3 @@ pRational x = if d == 1
               else show n ++ divisionOp ++ show d
     where n = numerator   x
           d = denominator x
-
-toBackend :: String -> AlgaBackend
-toBackend "ardour" = ardourBackend
-toBackend _        = cubaseBackend

@@ -32,6 +32,7 @@ import qualified Data.Text.Lazy.IO as T
 
 import Alga.Configuration
 import Alga.Interaction
+import Alga.Translation (toBackend)
 
 data Opts = Opts
     { opInterac :: Bool
