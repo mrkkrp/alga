@@ -28,6 +28,7 @@ module Alga.Translation.Base
     , AutoTrack (..)
     , topDefs
     , patchAuto
+    , nullTrack
     , totalDur )
 where
 
@@ -79,6 +80,9 @@ patchAuto s b file exec = do
               >>> errorMsgStderr
               >>> getErrStatus
   return status
+
+nullTrack :: AutoTrack -> Bool
+nullTrack AutoTrack { atVal = val, atDur = dur } = null val || null dur
 
 totalDur :: AutoTrack -> Double
 totalDur AutoTrack { atDur = dur } = sum dur

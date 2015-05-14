@@ -91,9 +91,10 @@ addEvent tag flags dn t =
                   [ mkInt "Type" 0 ]
                 , mkList "Events" "obj" (genEvents t) ]
               , mkAutoTrack dn
-              , mkInt "Height" 42
-              , mkInt "Tag"    tag
-              , mkInt "TrackFlags" flags ]
+              , unlessNull (mkInt "Height" 42)
+              , mkInt "Tag" tag
+              , unlessNull (mkInt "TrackFlags" flags) ]
+    where unlessNull a = if nullTrack t then none else a
 
 mkAutoTrack :: ArrowXml a => Maybe String -> a XmlTree XmlTree
 mkAutoTrack dn = ifA (deep $ isAT dn) mkLink mkCmpl
