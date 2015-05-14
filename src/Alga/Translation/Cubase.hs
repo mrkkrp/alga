@@ -77,7 +77,8 @@ iEvent :: ArrowXml a => String -> Int -> AutoTrack -> a XmlTree XmlTree
 iEvent dn i = addEvent (4201 + i) 4 (Just dn)
 
 sendEvent :: ArrowXml a => String -> Int -> AutoTrack -> a XmlTree XmlTree
-sendEvent dn i = addEvent (4096 + i) 5 (Just dn)
+sendEvent dn i =
+    addEvent (4096 + i) 5 (Just dn) . if i == 1 then fixRange else id
 
 addEvent :: ArrowXml a => Int -> Int -> Maybe String ->
             AutoTrack -> a XmlTree XmlTree
