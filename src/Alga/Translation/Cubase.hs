@@ -20,6 +20,7 @@
 module Alga.Translation.Cubase (cubaseBackend) where
 
 import Control.Arrow
+import Data.Bool (bool)
 import Data.Char (ord)
 import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe, listToMaybe)
@@ -77,8 +78,7 @@ iEvent :: ArrowXml a => String -> Int -> AutoTrack -> a XmlTree XmlTree
 iEvent dn i = addEvent (4201 + i) 4 (Just dn)
 
 sendEvent :: ArrowXml a => String -> Int -> AutoTrack -> a XmlTree XmlTree
-sendEvent dn i =
-    addEvent (4096 + i) 5 (Just dn) . if i == 1 then fixRange else id
+sendEvent dn i = addEvent (4096 + i) 5 (Just dn) . bool id fixRange (i == 1)
 
 addEvent :: ArrowXml a => Int -> Int -> Maybe String ->
             AutoTrack -> a XmlTree XmlTree
