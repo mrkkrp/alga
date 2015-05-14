@@ -30,7 +30,8 @@ module Alga.Interaction
     , cmdMake
     , interaction
     , dfltSeed
-    , dfltBeats )
+    , dfltBeats
+    , toBackend )
 where
 
 import Control.Monad.Reader

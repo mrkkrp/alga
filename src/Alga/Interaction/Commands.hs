@@ -179,8 +179,9 @@ cmdMake' str =
 
 cmdMake :: Int -> Double -> String -> AlgaIO ()
 cmdMake s b f = do
-  file   <- output f "xml"
-  status <- liftEnv $ patchAuto s b file cubaseBackend
+  file    <- output f "xml"
+  backend <- getBackend
+  status <- liftEnv $ patchAuto s b file backend
   let msg = if status == 0
             then "File patched sucessfully \"{}\".\n"
             else "Failed to patch file \"{}\".\n"

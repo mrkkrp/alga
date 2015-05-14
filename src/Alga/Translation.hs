@@ -19,12 +19,13 @@
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
 module Alga.Translation
-    ( topDefs
+    ( AlgaBackend
+    , topDefs
     , patchAuto
-    , cubaseBackend
-    , ardourBackend )
+    , ardourBackend
+    , cubaseBackend )
 where
 
-import Alga.Translation.Ardour
 import Alga.Translation.Base
+import Alga.Translation.Ardour
 import Alga.Translation.Cubase

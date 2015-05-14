@@ -19,9 +19,7 @@
 
 module Alga.Translation.Ardour (ardourBackend) where
 
-import Text.XML.HXT.Core
-
 import Alga.Translation.Base
 
-ardourBackend :: AutoMap -> IOSArrow XmlTree XmlTree
+ardourBackend :: AlgaBackend
 ardourBackend = undefined

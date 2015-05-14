@@ -31,6 +31,8 @@ module Alga.Interaction.Base
     , AlgaCfg (..)
     , lift
     , liftEnv
+    , getBackend
+    , setBackend
     , getPrevLen
     , setPrevLen
     , getSrcFile
@@ -41,7 +43,8 @@ module Alga.Interaction.Base
     , dfltSeed
     , dfltBeats
     , processDef
-    , pRational)
+    , pRational
+    , toBackend )
 where
 
 import Control.Monad.Reader
@@ -53,6 +56,7 @@ import qualified System.Console.Haskeline as L
 
 import Alga.Language
 import Alga.Representation
+import Alga.Translation
 
 type AlgaIO = AlgaInt IO
 
@@ -75,7 +79,8 @@ deriving instance L.MonadException m => L.MonadException (AlgaEnv m)
 deriving instance L.MonadException m => L.MonadException (AlgaInt m)
 
 data AlgaSt = AlgaSt
-    { stPrevLen :: Int
+    { stBackend :: AlgaBackend
+    , stPrevLen :: Int
     , stSrcFile :: String }
 
 data AlgaCfg = AlgaCfg
@@ -86,6 +91,12 @@ data AlgaCfg = AlgaCfg
 runAlgaInt :: Monad m => AlgaInt m a -> AlgaSt -> AlgaCfg -> m a
 runAlgaInt m st cfg =
     runAlgaEnv (runReaderT (evalStateT (unAlgaInt m) st) cfg)
+
+getBackend :: AlgaIO AlgaBackend
+getBackend = stBackend <$> get
+
+setBackend :: AlgaBackend -> AlgaIO ()
+setBackend x = modify $ \e -> e { stBackend = x }
 
 getPrevLen :: AlgaIO Int
 getPrevLen = stPrevLen <$> get
@@ -127,3 +138,7 @@ pRational x = if d == 1
               else show n ++ divisionOp ++ show d
     where n = numerator   x
           d = denominator x
+
+toBackend :: String -> AlgaBackend
+toBackend "ardour" = ardourBackend
+toBackend _        = cubaseBackend

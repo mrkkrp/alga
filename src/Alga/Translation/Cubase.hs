@@ -35,7 +35,7 @@ infixl 7 ++=
 infixr 5 />/
 infixl 9 !!!
 
-cubaseBackend :: AutoMap -> IOSArrow XmlTree XmlTree
+cubaseBackend :: AlgaBackend
 cubaseBackend m = configSysVars [withNoEmptyElemFor nonEmptyElts] >>>
                   "tracklist" />/ inList "track" ("obj" />/ procTrack m)
 

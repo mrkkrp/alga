@@ -86,7 +86,8 @@ runAlga e = do
   params <- loadConfig
   wdir   <- getCurrentDirectory
   void $ runAlgaInt e
-       AlgaSt { stPrevLen = lookupCfg params "prvlen" 18
+       AlgaSt { stBackend = toBackend $ lookupCfg params "backend" "default"
+              , stPrevLen = lookupCfg params "prvlen" 18
               , stSrcFile = lookupCfg params "src"    wdir </> "foo.ga" }
        AlgaCfg { cfgPrecision = lookupCfg params "precision" 0.01
                , cfgPrompt    = lookupCfg params "prompt"    "> "

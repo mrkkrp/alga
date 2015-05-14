@@ -22,7 +22,8 @@
 {-# LANGUAGE TupleSections #-}
 
 module Alga.Translation.Base
-    ( AutoMap
+    ( AlgaBackend
+    , AutoMap
     , AutoBatch
     , AutoType (..)
     , AutoTrack (..)
@@ -44,8 +45,9 @@ import Text.XML.HXT.Core
 import Alga.Language (AlgaEnv, setRandGen, getRefs, evalDef)
 import Alga.Representation (autoDel)
 
-type AutoMap   = M.Map String AutoBatch
-type AutoBatch = M.Map AutoType AutoTrack
+type AlgaBackend = AutoMap -> IOSArrow XmlTree XmlTree
+type AutoMap     = M.Map String AutoBatch
+type AutoBatch   = M.Map AutoType AutoTrack
 
 data AutoType
     = Volume
@@ -68,7 +70,7 @@ topDefs = filter f <$> getRefs
     where f x = any (`isSuffixOf` x) topRefSuffixes
 
 patchAuto :: MonadIO m => Int -> Double -> FilePath ->
-             (AutoMap -> IOSArrow XmlTree XmlTree) -> AlgaEnv m Int
+             AlgaBackend -> AlgaEnv m Int
 patchAuto s b file exec = do
   setRandGen s
   refs <- nub . (>>= topRef) <$> getRefs
