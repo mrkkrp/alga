@@ -245,7 +245,7 @@ trackEvents :: [String]
 trackEvents = ["MAudioTrackEvent","MInstrumentTrackEvent","MDeviceTrackEvent"]
 
 tracks :: [String]
-tracks = ["MAudioTrack","MInstrumentTrack","MDeviceTrack"]
+tracks = ["MAudioTrack","MInstrumentTrack","MTrack"]
 
 ritualVolumeEvent :: M.Map AutoType AutoTrack
 ritualVolumeEvent = M.singleton Volume (AutoTrack [] [])
