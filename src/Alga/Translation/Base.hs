@@ -27,19 +27,19 @@ module Alga.Translation.Base
     , AutoBatch
     , AutoType (..)
     , AutoTrack (..)
-    , topDefs
-    , patchAuto
     , nullTrack
-    , totalDur )
+    , totalDur
+    , topDefs
+    , patchAuto )
 where
 
 import Control.Monad.IO.Class
-import Data.List (nub, isSuffixOf)
-import Data.Maybe (maybeToList)
+import Data.Maybe (isJust, maybeToList)
 import Data.Ratio (numerator, denominator)
 import qualified Data.Map.Lazy as M
-import qualified Data.Set as S
 
+import Text.Parsec
+import Text.Parsec.String
 import Text.XML.HXT.Core
 
 import Alga.Language (AlgaEnv, setRandGen, getRefs, evalDef)
@@ -63,18 +63,21 @@ data AutoTrack = AutoTrack
     { atVal :: [Double]
     , atDur :: [Double] }
 
-type AutoSet = S.Set String
+nullTrack :: AutoTrack -> Bool
+nullTrack AutoTrack { atVal = val, atDur = dur } = null val || null dur
+
+totalDur :: AutoTrack -> Double
+totalDur AutoTrack { atDur = dur } = sum dur
 
 topDefs :: Monad m => AlgaEnv m [String]
-topDefs = filter f <$> getRefs
-    where f x = any (`isSuffixOf` x) topRefSuffixes
+topDefs = filter isTopRef <$> getRefs
 
 patchAuto :: MonadIO m => Int -> Double -> FilePath ->
              AlgaBackend -> AlgaEnv m Int
 patchAuto s b file exec = do
   setRandGen s
-  refs <- nub . (>>= topRef) <$> getRefs
-  amap <- M.fromList <$> mapM (makeBatch b) refs
+  refs <- getRefs
+  amap <- M.fromListWith M.union . concat <$> mapM (toMap b) refs
   [status] <- liftIO . runX $
               readDocument [withValidate no] file
               >>> exec amap
@@ -83,25 +86,19 @@ patchAuto s b file exec = do
               >>> getErrStatus
   return status
 
-nullTrack :: AutoTrack -> Bool
-nullTrack AutoTrack { atVal = val, atDur = dur } = null val || null dur
+toMap :: Monad m => Double -> String -> AlgaEnv m [(String, AutoBatch)]
+toMap b n =
+    case parseTopRef n of
+      Nothing      -> return []
+      Just (r, at) -> fmap f . maybeToList <$> evalTrack b n
+        where f x = (r, M.singleton at x)
 
-totalDur :: AutoTrack -> Double
-totalDur AutoTrack { atDur = dur } = sum dur
-
-makeBatch :: Monad m => Double -> String -> AlgaEnv m (String, AutoBatch)
-makeBatch b t = (t,) . M.fromList . (>>= maybeToList) <$>
-                mapM (evalTrack b t) autoKeys
-
-evalTrack :: Monad m => Double -> String -> String ->
-             AlgaEnv m (Maybe (AutoType, AutoTrack))
-evalTrack b t a = do
-  let valRef = t ++ [autoDel] ++ a
-      durRef = valRef ++ durSuffix
+evalTrack :: Monad m => Double -> String -> AlgaEnv m (Maybe AutoTrack)
+evalTrack b valRef = do
+  let durRef = valRef ++ durSuffix
   val <- fmap toFloat <$> evalDef valRef
   dur <- fmap toFloat <$> evalDef durRef
-  return $ (,) <$> autoType a <*>
-         if null val || null dur
+  return $ if null val || null dur
            then Nothing
            else Just $ slice b AutoTrack { atVal = val, atDur = dur }
 
@@ -117,29 +114,59 @@ toFloat x = n / d
     where n = fromIntegral $ numerator   x
           d = fromIntegral $ denominator x
 
-topRef :: String -> [String]
-topRef name = [t | a `S.member` topRefSuffixes]
-    where (t, a) = break (== autoDel) name
+-- Parsing
 
-topRefSuffixes :: AutoSet
-topRefSuffixes = S.map (autoDel:) (S.fromList raw)
-    where raw = autoKeys >>= \x -> [x, x ++ durSuffix]
+isTopRef :: String -> Bool
+isTopRef = isJust . parse' pTopRef'
 
-autoType :: String -> Maybe AutoType
-autoType i = M.lookup i autoMap
+parseTopRef :: String -> Maybe (String, AutoType)
+parseTopRef = parse' pTopRef
 
-autoMap :: M.Map String AutoType
-autoMap = M.fromList (basicMap ++ insertMap ++ sendMap ++ synthMap)
-    where basicMap  = [ ("volume", Volume) , ("igain",  IGain)
-                      , ("mute",   Mute)   , ("pan",    Pan) ]
-          insertMap = [ ("i" ++ show n ++ "_" ++ show s, InsertSlot n s)
-                      | n <- [0..7], s <- [0..99] ]
-          sendMap   = [ ("s" ++ show n ++ "_" ++ show s, SendSlot n s)
-                      | n <- [0..7], s <- [0..9] ]
-          synthMap  = [ ("p" ++ show s, SynthParam s) | s <- [0..99] ]
+pTopRef' :: Parser (String, AutoType)
+pTopRef' = pTopRef <* optional (string durSuffix)
 
-autoKeys :: [String]
-autoKeys = M.keys autoMap
+pTopRef :: Parser (String, AutoType)
+pTopRef = (,) <$> many1 (satisfy (/= autoDel)) <* char autoDel <*> pSuffix
+
+pSuffix :: Parser AutoType
+pSuffix
+    =  try pVolume
+   <|> try pMute
+   <|> try pIGain
+   <|> try pPan
+   <|> try pInsert
+   <|> try pSend
+   <|> pSynth
+
+pVolume :: Parser AutoType
+pVolume = string "volume" *> pure Volume
+
+pMute :: Parser AutoType
+pMute = string "mute" *> pure Mute
+
+pIGain :: Parser AutoType
+pIGain = string "igain" *> pure IGain
+
+pPan :: Parser AutoType
+pPan = string "pan" *> pure Pan
+
+pInsert :: Parser AutoType
+pInsert = string "i" *> (InsertSlot <$> pNum <* string "_" <*> pNum)
+
+pSend :: Parser AutoType
+pSend = string "s" *> (SendSlot <$> pNum <* string "_" <*> pNum)
+
+pSynth :: Parser AutoType
+pSynth = string "p" *> (SynthParam <$> pNum)
+
+pNum :: Parser Int
+pNum = read <$> many1 digit
+
+parse' :: Parser a -> String -> Maybe a
+parse' p str =
+    case parse (p <* eof) "" str of
+      Left  _ -> Nothing
+      Right x -> Just x
 
 durSuffix :: String
 durSuffix = "d"
