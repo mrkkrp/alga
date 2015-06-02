@@ -45,6 +45,30 @@ automation tracks in place.
 
 5. Done (you can use `uninstall.sh` to uninstall the program).
 
+## Example
+
+ALGA is a simple declarative language. Just to get feeling of it:
+
+```
+#
+# Example of ALGA program
+# Tested with Cubase 5
+#
+
+my_track.pan  = {0..16} / 16 $ [{2}]
+my_track.pand = 1/8, 0
+```
+
+This thing changes position of stereo-panorama for track named
+`my_track`. There are 16 possible values from left to right. Panorama is
+changed instantly, every eighth note.
+
+You can control volume, panorama, mute, input gain, all parameters of send
+slots, insertion slots, and software synths. Changes can be applied to audio
+tracks, group tracks, instrument tracks, and effect tracks.
+
+See [ALGA Manual](https://mrkkrp.github.io/alga/) for more information.
+
 ## License
 
 Copyright © 2015 Mark Karpov
