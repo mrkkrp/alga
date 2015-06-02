@@ -1,8 +1,7 @@
 # ALGA
 
-*First of all, this stuff is under development. It's not usable yet. This
- repository is place for me to experiment indefinitely until the project can
- be used by other people.*
+*Note: this project is usable, but decent documentation and support for
+ Ardour are not done yet. However, it works smoothly with Cubase.*
 
 How to algorithmically control every aspect of music using familiar, robust
 tools: plugins, DAWs, etc. that have not built with this in mind? I've
