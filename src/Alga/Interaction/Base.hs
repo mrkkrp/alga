@@ -92,31 +92,31 @@ runAlgaInt m st cfg =
     runAlgaEnv (runReaderT (evalStateT (unAlgaInt m) st) cfg)
 
 getBackend :: AlgaIO AlgaBackend
-getBackend = stBackend <$> get
+getBackend = gets stBackend
 
 setBackend :: AlgaBackend -> AlgaIO ()
 setBackend x = modify $ \e -> e { stBackend = x }
 
 getPrevLen :: AlgaIO Int
-getPrevLen = stPrevLen <$> get
+getPrevLen = gets stPrevLen
 
 setPrevLen :: Int -> AlgaIO ()
 setPrevLen x = modify $ \e -> e { stPrevLen = x }
 
 getSrcFile :: AlgaIO String
-getSrcFile = stSrcFile <$> get
+getSrcFile = gets stSrcFile
 
 setSrcFile :: String -> AlgaIO ()
 setSrcFile x = modify $ \e -> e { stSrcFile = x }
 
 getPrecision :: AlgaIO Double
-getPrecision = cfgPrecision <$> ask
+getPrecision = asks cfgPrecision
 
 getPrompt :: AlgaIO String
-getPrompt = cfgPrompt <$> ask
+getPrompt = asks cfgPrompt
 
 getVerbose :: AlgaIO Bool
-getVerbose = cfgVerbose <$> ask
+getVerbose = asks cfgVerbose
 
 dfltSeed :: Int
 dfltSeed = 0
