@@ -42,10 +42,11 @@ import Control.Monad.State.Strict
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
 import Data.Ratio ((%))
+import System.Random (split)
 import qualified Data.Map.Strict as M
 import qualified Data.Text.Lazy as T
 
-import System.Random.Mersenne.Pure64
+import System.Random.TF (TFGen, mkTFGen)
 
 import Alga.Language.SyntaxTree
 import Alga.Representation.Base (extremumAlias, panAlias)
@@ -53,7 +54,7 @@ import Alga.Representation.Show (showDefinition)
 
 data AlgaEnvSt = AlgaEnvSt
     { stDefs    :: Defs
-    , stRandGen :: PureMT }
+    , stRandGen :: TFGen }
 
 type Defs = M.Map String SyntaxTree
 
@@ -69,7 +70,7 @@ newtype AlgaEnv m a = AlgaEnv
 runAlgaEnv :: Monad m => AlgaEnv m a -> m a
 runAlgaEnv e = evalStateT (unAlgaEnv e) AlgaEnvSt
                { stDefs    = defaultDefs
-               , stRandGen = pureMT 0 }
+               , stRandGen = mkTFGen 0 }
 
 defaultDefs :: Defs
 defaultDefs = M.fromList [ (a, [Value 0])
@@ -135,13 +136,13 @@ checkRecur name tree = check <$> getDefs
     where check = elem name . tDefs name . M.insert name tree
 
 setRandGen :: Monad m => Int -> AlgaEnv m ()
-setRandGen x = modify $ \e -> e { stRandGen = pureMT (fromIntegral x) }
+setRandGen x = modify $ \e -> e { stRandGen = mkTFGen x }
 
-newRandGen :: Monad m => AlgaEnv m PureMT
+newRandGen :: Monad m => AlgaEnv m TFGen
 newRandGen = do
-  (n, g) <- randomWord64 <$> gets stRandGen
-  modify $ \e -> e { stRandGen = pureMT n }
-  return . pureMT . fst . randomWord64 $ g
+  (g, g') <- split <$> gets stRandGen
+  modify $ \e -> e { stRandGen = g' }
+  return g
 
 toDefs :: [String] -> Defs
 toDefs = M.fromList . fmap (, [])
