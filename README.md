@@ -33,7 +33,7 @@ automation tracks in place.
 3. Download and untar git repository of MIDA, or clone it:
 
    ```
-   $ git clone https://github.com/mrkkrp/alga.git master
+   $ git clone https://github.com/mrkkrp/alga.git
    ```
 
 4. Go to the root directory of the repository and execute:
