@@ -74,23 +74,23 @@ data CompletionScheme = None | Files | Names deriving (Eq, Show)
 
 commands :: [Cmd]
 commands =
-    [ Cmd "backend" cmdBackend "Set backend (name of DAW)."             None
-    , Cmd "cd"      cmdCd      "Change working directory."              Files
-    , Cmd "clear"   cmdClear   "Restore default state of environment."  None
-    , Cmd "def"     cmdDef     "Print definition of given symbol."      Names
-    , Cmd "help"    cmdHelp    "Show this help text."                   None
-    , Cmd "lin"     cmdLin     "Linear scale conversion to ratio."      None
-    , Cmd "load"    cmdLoad'   "Load definitions from given file."      Files
-    , Cmd "log"     cmdLog     "Logarithmic scale conversion to ratio." None
-    , Cmd "make"    cmdMake'   "Patch an XML file."                     Files
-    , Cmd "prvlen"  cmdLength  "Set length of displayed results."       None
-    , Cmd "purge"   cmdPurge   "Remove redundant definitions."          None
-    , Cmd "pwd"     cmdPwd     "Print working directory."               None
-    , Cmd "quit"    cmdQuit    "Quit the interactive environment."      None
-    , Cmd "ratio"   cmdRatio   "Real number to ratio converter."        None
-    , Cmd "save"    cmdSave    "Save current environment in file."      Files
-    , Cmd "udef"    cmdUdef    "Remove definition of given symbol."     Names
-    , Cmd "vol"     cmdVol     "Convert decibels to ratio."             None ]
+    [ Cmd "backend" cmdBackend "Set backend (name of DAW)"             None
+    , Cmd "cd"      cmdCd      "Change working directory"              Files
+    , Cmd "clear"   cmdClear   "Restore default state of environment"  None
+    , Cmd "def"     cmdDef     "Print definition of given symbol"      Names
+    , Cmd "help"    cmdHelp    "Show this help text"                   None
+    , Cmd "lin"     cmdLin     "Linear scale conversion to ratio"      None
+    , Cmd "load"    cmdLoad'   "Load definitions from given file"      Files
+    , Cmd "log"     cmdLog     "Logarithmic scale conversion to ratio" None
+    , Cmd "make"    cmdMake'   "Patch an XML file"                     Files
+    , Cmd "prvlen"  cmdLength  "Set length of displayed results"       None
+    , Cmd "purge"   cmdPurge   "Remove redundant definitions"          None
+    , Cmd "pwd"     cmdPwd     "Print working directory"               None
+    , Cmd "quit"    cmdQuit    "Quit the interactive environment"      None
+    , Cmd "ratio"   cmdRatio   "Real number to ratio converter"        None
+    , Cmd "save"    cmdSave    "Save current environment in file"      Files
+    , Cmd "udef"    cmdUdef    "Remove definition of given symbol"     Names
+    , Cmd "vol"     cmdVol     "Convert decibels to ratio"             None ]
 
 processCmd :: T.Text -> AlgaIO ()
 processCmd txt =
