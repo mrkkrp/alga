@@ -52,7 +52,7 @@ data AutoType
     | IGain
     | Pan
     | InsertSlot Int Int
-    | SendSlot Int Int
+    | SendSlot   Int Int
     | SynthParam Int
     deriving (Show, Eq, Ord)
 
@@ -69,8 +69,8 @@ totalDur AutoTrack { atDur = dur } = sum dur
 topDefs :: Monad m => AlgaEnv m [String]
 topDefs = filter isTopRef <$> getRefs
 
-patchAuto :: MonadIO m => Int -> Double -> FilePath ->
-             AlgaBackend -> AlgaEnv m Int
+patchAuto :: MonadIO m =>
+             Int -> Double -> FilePath -> AlgaBackend -> AlgaEnv m Int
 patchAuto s b file exec = do
   setRandGen s
   refs <- getRefs
