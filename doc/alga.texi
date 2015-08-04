@@ -1,0 +1,1133 @@
+\input texinfo    @c -*-texinfo-*-
+@comment %**start of header (This is for running Texinfo on a region.)
+@setfilename alga.info
+@settitle ALGA Manual
+@set EDITION 0.1.0
+@set VERSION 0.1.0
+@set UPDATED 1 August 2015
+@set UPDATED-MONTH August 2015
+@set LASTCHANGE Sat August 1 22:57:18 EST 2015
+
+@comment %**end of header (This is for running Texinfo on a region.)
+@synindex vr fn
+
+@copying
+This manual describes ALGA language and its realization (version
+@value{VERSION}, @value{UPDATED}).
+
+Copyright @copyright{} 2015 Mark Karpov
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included in the section entitled “GNU Free
+Documentation License”.
+
+@end quotation
+@end copying
+
+@dircategory Languages
+@direntry
+* ALGA: (ALGA).       ALGA language description.
+@end direntry
+
+@titlepage
+@title ALGA Manual
+@subtitle Edition @value{EDITION}, for @code{ALGA} Version @value{VERSION}.
+@subtitle @value{UPDATED-MONTH}
+@author Mark Karpov
+
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top
+@top ALGA
+
+This document describes ALGA language and its primary realization. This
+program is distributed under GNU General Public License, version 3.
+
+@menu
+* What is ALGA?:: General description of ALGA language.
+* Installation:: Instructions to build and install ALGA on
+Posix-compatible systems.
+* Invocation:: Command line interface of the program.
+* Configuration File:: How to change behavior of ALGA via
+configuration file.
+* Interactive REPL:: How to use ALGA interpreter in interactive mode.
+* ALGA Tutorial:: This tutorial teaches concepts of ALGA language.
+* GNU Free Documentation License:: License for copying this manual.
+* Concept Index:: Index of concepts described in this manual.
+@end menu
+@end ifnottex
+
+@node What is ALGA?
+@chapter What is ALGA?
+
+ALGA is a MIDA-like declarative language for algorithmic automation in
+popular digital audio workstations (DAWs). ALGA is a good and robust
+choice for several reasons:
+
+@itemize
+@item
+It can control every aspect of any plugin, software instrument,
+insertion slot, send slot, etc.
+@item
+It doesn't impose overhead of any kind on your DAW because it just
+patches your project and all the automation will work in native way.
+@item
+It's very simple and ideal for fast hacking.
+@end itemize
+
+Currently ALGA can be used to patch projects (or “exported tracks”), and
+also in interactive mode that will help you to understand how ALGA
+language works.
+
+@node Installation
+@chapter Installation
+
+It's possible to use ALGA on any platform on which
+@uref{https://www.haskell.org/platform/,Haskell Platform} is
+supported. Here we describe how to compile and install ALGA on
+Posix-compatible systems.
+
+@enumerate
+@item
+@cindex Haskell Platform
+Install @uref{https://www.haskell.org/platform/,Haskell Platform};
+@item
+@cindex Cabal
+Install @uref{https://www.haskell.org/cabal/,Cabal};
+@item
+Download and untar git repository of ALGA, or clone it:
+@example
+$ git clone https://github.com/mrkkrp/alga.git
+@end example
+@item
+Go to the root directory of the repository and execute:
+@example
+$ cabal update
+$ cabal configure
+$ cabal install --only-dependencies
+$ cabal build
+# sh install.sh
+@end example
+@item
+Done (you can use @code{uninstall.sh} to uninstall the program).
+@end enumerate
+
+@node Invocation
+@chapter Invocation
+
+@cindex batch mode
+@cindex command line options
+
+ALGA performs patching of XML files that represent tracks in some
+DAW. The program can be used in batch mode as well as in REPL mode. If
+no input file is supplied, ALGA starts in interactive mode by
+default. Otherwise, one should use command line options to start ALGA in
+interactive mode.
+
+@example
+alga [-i|--interactive] [-B|--backend DAW] [-s|--seed SEED]
+     [-b|--beats BEATS] [-t|--target TARGET] [--license] [--version]
+     [FILES]
+@end example
+
+Here's the complete list of command line options:
+
+@table @asis
+@item @code{-h}, @code{--help}
+Shows information regarding invocation parameters.
+@item @code{-i}, @code{--interactive}
+Run the program in interactive mode. This option effectively disables
+all other supplied options (except for @code{--backend}), because they
+only make sense in non-interactive (batch) mode.
+@item @code{-B} @var{daw}, @code{--backend} @var{daw}
+Specify which backend to use, @var{daw} should be name of some supported
+DAW, for example @samp{ardour} or @samp{cubase}.
+@item @code{-s} @var{seed}, @code{--seed} @var{seed}
+Set seed for generation. It's possible to generate identical output
+files if the same seed is used. Default value is @code{0}.
+@item @code{-b} @var{beats}, @code{--beats} @var{beats}
+Set total length of automation track as number of whole notes
+@var{beats} (name of the variable is such for historical
+reasons). Default value is @code{4.0}.
+@item @code{-t} @var{target}, @code{--target} @var{target}
+Specify target XML file for patching. If the option is not supplied,
+file name is generated by replacing extension of source file with
+@file{.xml}.
+@item @code{--license}
+Show license of the program.
+@item @code{--version}
+Show version of the program.
+@end table
+
+@node Configuration File
+@chapter Configuration File
+
+ALGA can be customized to some extent with help of configuration
+file. One should create the file in his/her home directory. This
+directory will be different on different operating systems. On GNU/Linux
+machines it would be something like @file{/home/username/.alga}, while
+Windows users should create the file @file{C:\Users\username\.alga}.
+
+@cindex configuration file variables
+
+The configuration file uses syntax similar to that of Unix shell. That
+is, you can use @samp{#} for line comments, and @samp{=} to assign new
+values (spaces before and after @samp{=} are ignored). Currently, all
+variables must be strings, integers, or Boolean values. If a string
+should contain space, enclose it into double quotes: @samp{"}. Inside
+the quotes you can escape characters with backslash @samp{\}. Integers
+must be written as decimal numbers. Boolean values can only have values
+of @samp{true} or @samp{false}. Everything is case-sensitive.
+
+The following table describes all variables that can be assigned in the
+configuration file.
+
+@table @code
+@item backend
+Currently only two values are acceptable: @samp{ardour} and
+@samp{cubase}. @samp{ardour} is the default value.
+@item precision
+This is floating point value that represents precision that's expected
+from various helper commands available in REPL (@pxref{Interactive
+REPL}). Default value is @samp{0.01}.
+@item prompt
+Prompt that will be used in ALGA REPL. Default value is @samp{> }.
+@item prvlen
+How many elements are displayed after evaluation of given
+principle. Default value is @samp{18}. You can also interactively change
+the value form interactive REPL (@pxref{Interactive REPL}).
+@item src
+Default name of currently active file. If you load some file, this
+value is automatically set to its file name. It's used to generate
+some file names when you decide to save your session. Default value is
+@samp{foo.da}.
+@item verbose
+This indicates whether or not display simplified principle before
+printing the final result of evaluation. Default value is
+@samp{true}.
+@end table
+
+Here is complete example of @file{.alga} file:
+
+@example
+#
+# ALGA Configuration File
+#
+
+prompt = "alga> "
+prvlen = 20
+verbose = false
+@end example
+
+@node Interactive REPL
+@chapter Interactive REPL
+
+In interactive mode you can enter principles for evaluation and special
+commands to control ALGA environment. ALGA has useful editing
+capabilities, similar to those of some shells (@code{bash} for
+example). It also has “smart” tab-completion, that is, completion's
+logic depends on contents of the input line.
+
+@cindex comments
+
+It's allowed to put comments in ALGA source files or in interactive
+environment. ALGA uses Unix shell comment style: line comments starts
+with @samp{#}.
+
+@cindex multiline input
+
+Interpreter supports multiline input. It automatically detects
+unbalanced parenthesis, braces, brackets. If you want to continue
+writing a principle on the next line, end current line with a comma
+@samp{,}. Since comma is allowed only between elements of a principle,
+ALGA knows that current principle is not completed.
+
+Evaluation of principles will be described later in this document
+(@pxref{ALGA Tutorial}). Now, let's examine all the special commands
+that are available in ALGA interactive sessions. All the commands begin
+with colon @samp{:} and are case-sensitive.
+
+@table @samp
+@item :backend
+Set backend (name of DAW). Currently two values are acceptable:
+@samp{ardour} and @samp{cubase} with @samp{ardour} being the default.
+@item :cd
+Change working directory. Since ALGA allows to load, save, and generate
+various files, it's sometimes convenient to be able to change
+directories.
+@item :clear
+Restore default state of environment removing all (non-standard)
+definitions from the memory.
+@item :def
+Print definition of specified symbol. This command can take several
+arguments (names of definitions to print). For example:
+@example
+> :def α β
+α = @{5 6 $ 17@}
+β = @{50..70@}
+@end example
+@item :help
+Show help text. For example:
+@example
+> :help
+Available commands:
+  :backend                 Set backend (name of DAW)
+  :cd                      Change working directory
+  :clear                   Restore default state of environment
+  :def                     Print definition of given symbol
+  :help                    Show this help text
+  :lin                     Linear scale conversion to ratio
+  :load                    Load definitions from given file
+  :log                     Logarithmic scale conversion to ratio
+  :make                    Patch an XML file
+  :prvlen                  Set length of displayed results
+  :purge                   Remove redundant definitions
+  :pwd                     Print working directory
+  :quit                    Quit the interactive environment
+  :ratio                   Real number to ratio converter
+  :save                    Save current environment in file
+  :udef                    Remove definition of given symbol
+  :vol                     Convert decibels to ratio
+@end example
+@item :lin
+Linear scale conversion to ratio. There are quite a few built-in helper
+functions in ALGA that should simplify working with ratios (since ALGA
+uses ratios as its main numeric data type). This is one of
+them. @code{:lin} command takes three arguments (in this order): minimum
+value of argument, maximum value of argument, and actual value of
+argument. The command prints a ratio from @code{0} (corresponds to
+minimum value) to @code{1} (maximum value) that can be used to specify
+value of automation parameter using linear scale.
+@item :load
+Load definition from specified source files. When something is defined,
+you usually get some helpful feedback:
+@example
+> :load tracks.ga
+• «synth0.pan»
+• «synth0.pand»
+• «synth1.pan»
+• «synth1.pand»
+• «synth2.pan»
+• «synth2.pand»
+"/home/mark/projects/music/tracks.ga" loaded successfully.
+@end example
+Note that you can specify as many source files as you wish, they will be
+loaded successively and all definitions from those files will be
+available in the interactive environment. Nevertheless, remember that
+definitions from one file may be silently redefined by definitions from
+another file if they have the same names.
+@item :log
+The same as @code{:lin}, but uses logarithmic scale for conversion.
+@item :make
+One of the most common commands is @samp{:make}. It patches XML file
+using current state of ALGA environment. This command takes up to three
+arguments. If you don't supply any of them, corresponding default value
+will be used.
+
+First argument is @dfn{seed} for generator of pseudo-random numbers. We
+work with seeds because they allow to generate identical scores given
+the same seeds (it's useful sometimes). Default value of this argument
+is @code{0}.
+
+Second argument is total length of composition as number of whole
+notes. This parameter is also known as “beats” (this name is for
+historical reasons). Default value is @code{4.0}.
+
+The last parameter is name of file to patch. If it's not supplied,
+system will try to guess the name. Guessing algorithm is the same as for
+@samp{:save} command but extension will be replaced with @file{.xml}.
+@item :prvlen
+This command allows to specify how many elements of evaluated principle
+will be displayed. Default value is @code{16}, but you can choose
+different default value via configuration file (@pxref{Configuration
+File}).
+@example
+> 1
+≡ 1
+⇒ 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1…
+> :prvlen 20
+> 1
+≡ 1
+⇒ 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1…
+@end example
+@item :purge
+You can “purge” all useless definitions from memory using @samp{:purge}
+command. A definition is considered useless if it's not used as a part
+of a top-level definition. Here's an example:
+@example
+> α = β β = 1/2 Y = 1/3 synth_group.volume = α
+• «α»
+• «β»
+• «Y»
+• «dur0»
+> :def Y
+Y = 1/3
+> :purge
+Environment purged.
+> :def Y
+Y =
+> :def β
+β = 1/2
+@end example
+What happened here? Well, we see that @code{synth_group.volume} is a top
+level definition (@pxref{Definitions}). @code{α} is used in
+@code{synth_group.volume}'s principle and @code{β} is used in @code{α}'s
+principle. So, @code{α} and @code{β} are necessary definitions. What's
+about @code{Y}? It does not participate in principle building of any
+top-level definition. System considers it redundant, so it purges it.
+@item :pwd
+Quite obviously, it prints current working directory.
+@item :quit
+Quit the interactive environment.
+@item :ratio
+This utility converts floating point numbers to ratios:
+@example
+> :ratio 0.897
+≈ 8/9
+@end example
+@item :save
+Save the current environment in ALGA source file. As you work with ALGA,
+you will need to save all existing definitions to hard disk. You can
+then edit them or load them into ALGA to continue your work. It's quite
+easy to accomplish with @samp{:save} command. This command takes an
+optional argument — file name. If you don't supply the file name, the
+system will try to guess it. It will be file name of loaded source file,
+last used file name, or default value (it can be specified in
+configuration file (@pxref{Configuration File}). I recommend @file{.ga}
+as file name extension for ALGA source files.
+@cindex removing definitions
+@item :udef
+Remove definition of given symbol. Although standard way to remove
+definition is @samp{definition_name =}, i.e. assigning empty principle
+to it, you may find @samp{:udef} command more convenient, because it
+takes arbitrary number of arguments and it also frees memory that was
+allocated for specified definitions.
+@item :vol
+Convert decibels to ratio:
+@example
+> :vol -3.0
+≈ 1/2
+@end example
+@end table
+
+@node ALGA Tutorial
+@chapter ALGA Tutorial
+
+Now that you know all the basic information about the interpreter, we
+can start our journey into the magic world of ALGA.
+
+ALGA is minimalistic, declarative language. In fact, it is so simple
+that any statement that has valid syntax will produce valid result. ALGA
+statement only has to pass parser, that's all. Declarative nature of
+ALGA means that you describe relations between principles that will be
+turned into automation data without describing control flow.
+
+@menu
+* Literal Values:: Most basic elements in ALGA.
+* Principles:: Some theoretic notions.
+* Definitions:: How to create re-usable pieces of code.
+* Ranges:: How to write long series of numbers concisely.
+* Multivalues:: Elements that have multiple values at the same time.
+* Sections:: Elements that are containers for other elements.
+* Conditional Multivalues:: Workhorses of algorithmic composition.
+* Polymorphic Operators:: How to combine elements?
+@end menu
+
+@node Literal Values
+@section Literal Values
+
+Start the interactive environment. Now you should be looking at
+something like this:
+
+@example
+[mark@@arch ~]$ alga
+ALGA Copyright © 2015 Mark Karpov
+
+This program comes with ABSOLUTELY NO WARRANTY. This is free software,
+and you are welcome to redistribute it under certain conditions; see
+GNU General Public License for details.
+
+ALGA Interactive Environment 0.1.0
+>
+@end example
+
+You can try your powers right away. Remember, ALGA is all about
+sequences of numbers. Numbers can represent different things:
+
+@itemize
+@item
+volume;
+@item
+mute;
+@item
+input gain;
+@item
+stereo panorama;
+@item
+parameters of «insert slots»;
+@item
+parameters of «send slots»;
+@item
+parameters of software synthesizes.
+@end itemize
+
+Let's start from how you can enter the numbers at the prompt and what
+you get as a result.
+
+@menu
+* Duration:: How duration is represented in ALGA.
+* Volume and Gain:: How volume and gain represented in ALGA.
+* Stereo Panorama:: How position on stereo panorama is represented in ALGA.
+* Other Parameters:: Other parameters.
+@end menu
+
+@node Duration
+@subsection Duration
+@cindex duration
+
+ALGA uses non-negative rational numbers in form of ratios to represent
+everything. This allows to preserve higher quality of calculations until
+values are converted into floating point representation (in result XML
+document). For example, you can try the following:
+
+@example
+> 1/3 * 3 # ignore repetitiveness for now
+≡ 1
+⇒ 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1…
+@end example
+
+Given this system of number representation you have natural means to
+represent duration of musical sounds. We work with abstract duration
+closely related to classical music notation techniques where @samp{1/8}
+represents eighth note, while @samp{1} signifies the whole note. To
+represent more «unusual» duration, use ratios like @samp{3/2} or
+@samp{11/8}; @samp{1 1/2} is not a single number, it's two different
+numbers.
+
+In ALGA we don't care about @dfn{tempo}, because this is something DAW
+handles for us, so this is all we need to know about duration of things.
+
+@node Volume and Gain
+@subsection Volume and Gain
+@cindex volume
+@cindex gain
+
+Usually volume and gain are represented in decibels. For example it's
+normal for volume to be represented from @code{0} (full volume) to
+@code{-∞}. However, for consistency, we use ratios to represent volume
+too. The conversion is rather trivial and ALGA has built-in
+functionality to assist you:
+
+@example
+> :vol 0
+≈ 1
+> :vol -6
+≈ 1/4
+> :vol -100
+≈ 0
+@end example
+
+For information about @code{:vol} command @pxref{Interactive REPL}.
+
+For your convenience there are predefined values @code{on} and
+@code{off} that you can use instead of @code{1} and @code{0}
+respectively:
+
+@example
+> on
+≡ 1
+⇒ 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1…
+> off
+≡ 0
+⇒ 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0…
+@end example
+
+@node Stereo Panorama
+@subsection Stereo Panorama
+@cindex panorama
+
+Just like duration and volume, position on stereo panorama is easy to
+represent with ratios. In ALGA there is a convention that @code{0}
+signifies extreme left position, @code{1} — extreme right position, and
+@code{1/2} is center.
+
+So, suppose you want your sound to change from left to right again and
+again, this is easy to represent:
+
+@example
+> 0 1/2 1 1/2
+≡ 0 1/2 1 1/2
+⇒ 0 1/2 1 1/2 0 1/2 1 1/2 0 1/2 1 1/2 0 1/2 1 1/2 0 1/2…
+@end example
+
+There are predefined values specially for panorama too. The previous
+principle can be written this way:
+
+@example
+> L C R C
+≡ 0 1/2 1 1/2
+⇒ 0 1/2 1 1/2 0 1/2 1 1/2 0 1/2 1 1/2 0 1/2 1 1/2 0 1/2…
+@end example
+
+@node Other Parameters
+@subsection Other Parameters
+@cindex insertion slots
+@cindex send slots
+@cindex synth parameters
+
+All other parameters are represented in similar way. Usually your tool
+of interest have finite range of values that some parameter can
+have. When represented in ALGA, minimum value of parameter is written as
+@code{0} and maximum value is written as @code{1}, of course you also
+have everything in between with endless precision.
+
+After a coupe of tries you will find correct ratios to represent desired
+values in ALGA.
+
+@node Principles
+@section Principles
+@cindex principle
+
+Smallest piece of composition in ALGA is called @dfn{element}. Now we
+know at least one kind of element: literal values (ratios). Realization
+of literal value is just its value. Bear with me and all the stuff will
+be clear to you.
+
+The thing we enter in interactive sessions is called @dfn{principle}. A
+principle can consist of zero or more elements. These elements may be
+separated by commas @samp{,}. Let's try some principles:
+
+@example
+> 1, 2, 3
+≡ 1 2 3
+⇒ 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3…
+> 1/3, 1/2, 90
+≡ 1/3 1/2 90
+⇒ 1/3 1/2 90 1/3 1/2 90 1/3 1/2 90 1/3 1/2 90 1/3 1/2 90 1/3 1/2 90…
+@end example
+
+So, we enter a principle and ALGA prints its realization. Realization of
+principle is built this way:
+
+@enumerate
+@item
+system tries to simplify given principle by de-referencing definitions
+and applying some operators, such as ranges or polymorphic operators (by
+default ALGA shows result of this step after identity symbol @samp{≡});
+@item
+ALGA cycles elements (not their values, you'll see difference later), so
+we have now infinite collection of elements;
+@item
+it realizes all the elements one by one.
+@end enumerate
+
+Realization can be either infinite sequence of non-negative numbers or
+@dfn{bottom} @samp{⊥}. Bottom is realization of empty principle and it
+is said to be less defined than any other result.
+
+@example
+>
+≡
+⇒ ⊥
+@end example
+
+In the next section we will see other rôle of bottom.
+
+@node Definitions
+@section Definitions
+@cindex definition
+@cindex identifier
+
+I've said that it's quite hard to write an incorrect statement in
+ALGA. Let's prove it. Here's my attempt:
+
+@example
+> foo
+≡
+⇒ ⊥
+> asdfasdflk
+≡
+⇒ ⊥
+> 1 2 rere 5
+≡ 1 2 5
+⇒ 1 2 5 1 2 5 1 2 5 1 2 5 1 2 5 1 2 5…
+@end example
+
+So, ALGA thinks that these things are realized to @code{⊥}, they can be
+even put inside a principle without any obvious harm.
+
+The thing is that ALGA considers any alpha-numeric sequence of
+characters (underscores are allowed too) that does not begin with a
+number @dfn{identifier}. Identifier has associated
+@dfn{definition}. Definition can hold a principle and default value of
+any definition is empty principle. You can combine definitions to build
+really complex principles. Keep in mind that names of the definitions
+are case-sensitive.
+
+Definitions are created by putting definition name on the left side of
+equation sign @samp{=} and a principle on the right of the sign. Let's
+give it a go:
+
+@example
+> α = 1 2 3
+• «α»
+> α
+≡ 1 2 3
+⇒ 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3…
+> α 5
+≡ 1 2 3 5
+⇒ 1 2 3 5 1 2 3 5 1 2 3 5 1 2 3 5 1 2…
+@end example
+
+Remember that definitions are like recipes how to create a principle and
+they live in interactive environment. So we can change a definition and
+all other definitions which use it will change accordingly:
+
+@example
+> α = 5 β = 6 Y = α β
+• «α»
+• «β»
+• «Y»
+> Y
+≡ 5 6
+⇒ 5 6 5 6 5 6 5 6 5 6 5 6 5 6 5 6 5 6…
+> β = 10
+• «β»
+> Y
+≡ 5 10
+⇒ 5 10 5 10 5 10 5 10 5 10 5 10 5 10 5 10 5 10…
+@end example
+
+And since all possible definitions are bound to empty principles, we can
+even design our principles in top-down manner, using definitions that we
+haven't defined yet.
+
+Now you're ready to create your first piece of music, but before you do
+it I should explain something about @dfn{top-level definitions}. These
+are special names that represent actual automation data. The system
+evaluates them to get values that are then written into XML document in
+acceptable for given DAW format.
+
+You need to know about naming scheme to be able to program automation in
+ALGA:
+
+@itemize
+@item
+@var{track_name}.@code{volume} — controls volume of track
+@var{track_name};
+@item
+@var{track_name}.@code{mute} — controls mute of track @var{track_name};
+@item
+@var{track_name}.@code{igain} — controls input gain of track
+@var{track_name};
+@item
+@var{track_name}.@code{pan} — controls position on stereo panorama of
+track @var{track_name};
+@item
+@var{track_name}.@code{i}@var{slotindex}@code{_}@var{paramindex} —
+controls value of “insert slot” @var{slotindex} parameter
+@var{paramindex} for track @var{track_name};
+@item
+@var{track_name}.@code{s}@var{slotindex}@code{_}@var{paramindex} —
+controls value of “send slot” @var{slotindex} parameter @var{paramindex}
+for track @var{track_name};
+@item
+@var{track_name}.@code{p}@var{paramindex} — controls value of synth
+parameter @var{paramindex} for track @var{track_name}.
+@end itemize
+
+To control duration of every step of one of the parameters listed above,
+add @samp{d} to the end of definition's name (@samp{d} stands for delta
+or duration).
+
+For example, suppose we have a Cubase or Ardour project that has track
+called @samp{synth0}. We want to control its position on stereo panorama
+so that every eighth note it changes cyclically from left to center,
+from center to right, from right to left again. Let's start our ALGA
+interpreter and create the necessary definitions:
+
+@example
+> synth0.pan = L L C C R R
+• «synth0.pan»
+> synth0.pan
+≡ 0 0 1/2 1/2 1 1
+⇒ 0 0 1/2 1/2 1 1 0 0 1/2 1/2 1 1 0 0 1/2 1/2 1 1…
+> synth0.pand = 1/8, 0
+• «synth0.pand»
+> synth0.pand
+≡ 1/8 0
+⇒ 1/8 0 1/8 0 1/8 0 1/8 0 1/8 0 1/8 0 1/8 0 1/8 0 1/8 0…
+@end example
+
+Now it's pretty easy to “patch” our project file or “exported
+definitions”, just use @code{:make} command:
+
+@example
+> :make 0 32 my_tracks.xml
+File patched sucessfully "my_tracks.xml".
+@end example
+
+For information about @code{:make} command @pxref{Interactive REPL}.
+
+So, that's basically all you need to know, experiment on your own, try
+to program very simplistic behaviors and you will see that this is
+pretty easy.
+
+@node Ranges
+@section Ranges
+@cindex range
+
+Now that you know all the basics, we can talk about advanced methods of
+element manipulation. Simplest such a method is @dfn{range}. Range in
+ALGA is written as two numbers separated by two commas @samp{..}
+(without space between them). Range notation represents collection of
+successive natural numbers from left-side number to right-side number
+inclusively.
+
+@example
+> 1..3
+≡ 1 2 3
+⇒ 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3…
+> 5..2
+≡ 5 4 3 2
+⇒ 5 4 3 2 5 4 3 2 5 4 3 2 5 4 3 2 5 4…
+@end example
+
+Although you cannot specify step between resulting elements, you can
+add a number to all elements of a principle or multiply all the
+elements by given number. How? Keep reading!
+
+@node Multivalues
+@section Multivalues
+@cindex multivalue
+
+So far, we've worked only with literal values. But ALGA knows one more
+kind of element: @dfn{multivalue}. Multivalue is such an element that
+has many values at the same time. You know, just like electron exists in
+different positions around atomic nucleus. Realization of multivalue is
+a pseudo-random value chosen from all possible variants.
+
+Multivalue is written as collection of possible values inside of braces:
+
+@example
+> @{1..3@}
+≡ @{1 2 3@}
+⇒ 1 2 2 2 3 1 2 1 1 1 2 2 3 1 3 1 2 1…
+@end example
+
+As you can see, the same element is replicated, but its realized value
+is different for every instance. Here we have uniform distribution,
+but you can change it with help of repetition:
+
+@example
+> @{1 1 2 3@} # 1 → 50%, 2 → 25%, 3 → 25%
+≡ @{1 1 2 3@}
+⇒ 1 1 1 1 2 1 3 3 1 3 3 3 1 2 1 3 3 1…
+> @{1 $ 8, 2 3@} # 1 → 80%, 2 → 10%, 3 → 10%
+≡ @{1 1 1 1 1 1 1 1 2 3@}
+⇒ 1 1 2 1 3 1 1 3 1 1 3 3 1 1 1 1 1 1…
+@end example
+
+Basic operators work together! (@samp{$} operator will be considered
+later, @pxref{Repetition}.) You can put a multivalue into another
+multivalue too:
+
+@example
+> @{1 @{2 3@}@} # 1 → 50%, 2 → 25%, 3 → 25%
+≡ @{1 @{2 3@}@}
+⇒ 3 1 1 1 1 2 1 1 1 2 1 2 1 1 3 1 3 2…
+@end example
+
+@code{1} has probability 50%, and @code{@{2 3@}} has probability
+50%. Inside @code{@{2 3@}} every element has equal probability 50%, so
+result probabilities look like: @code{1} — 50%, @code{2} — 25%, @code{3}
+— 25%.
+
+@node Sections
+@section Sections
+@cindex section
+
+@dfn{Section} is another kind of element. Section is collection of
+elements that can be manipulated as one element.
+
+Sections are written as a principle inside of square brackets (@samp{[}
+and @samp{]}):
+
+@example
+> [1..3]
+≡ 1 2 3
+⇒ 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3…
+@end example
+
+Typical example of their use is in juxtaposition with multivalues. With
+help of sections you can easily use sequence of elements as part of
+multivalue:
+
+@example
+> @{1 2 [3..5]@}
+≡ @{1 2 [3 4 5]@}
+⇒ 3 4 5 3 4 5 1 2 1 2 3 4 5 2 3 4 5 1…
+@end example
+
+So here we have @code{1} with probability @code{1/3}, @code{2} with
+probability @code{1/3} and @code{3 4 5} with the same probability. We
+could use multivalues in the section too to get arbitrary complex
+structures.
+
+@node Conditional Multivalues
+@section Conditional Multivalues
+@cindex conditional multivalue
+
+One step forward is @dfn{conditional multivalues}. These are just like
+multivalues, but they depend on realized value of previous element. For
+every value of previous element conditional multivalue provides
+collection of possible results. If there is no such a collection, random
+collection will be selected from all existing collections. If first
+element of a sequence is conditional multivalue, actual multivalue
+(collection) will be chosen randomly for the first iteration.
+
+This example demonstrates syntax of conditional multivalue and its
+logic:
+
+@example
+> @{<1> 2 3 <2> 3 <3> 1@}
+≡ @{<1> 2 3 <2> 3 <3> 1@}
+⇒ 1 3 1 3 1 2 3 1 2 3 1 2 3 1 3 1 2 3…
+@end example
+
+If the last element has value @code{1}, conditional multivalue will have
+value @code{2} or @code{3}. If the last element has value @code{2},
+conditional multivalue will have value @code{3} for sure, and so on.
+
+Conditions are checked from left to right, first matched condition
+selects realization of one of corresponding elements.
+
+It's also possible to use multiple conditional elements:
+
+@example
+> @{<1 2> 3 <3> 1 2@}
+≡ @{<1 2> 3 <3> 1 2@}
+⇒ 3 1 3 2 3 2 3 2 3 2 3 2 3 1 3 2 3 2…
+@end example
+
+You can use sections to match not only on the last element, but on
+sequence of elements:
+
+@example
+> @{<[1..3]> 4 <1..4> 1..3@}
+≡ @{<[1 2 3]> 4 <1 2 3 4> 1 2 3@}
+⇒ 4 3 1 2 1 2 2 2 3 2 3 3 1 1 2 3 4 1…
+@end example
+
+Here, @code{1 2 3} triggers @code{4} while any other single element
+triggers @code{1}, @code{2}, or @code{3}.
+
+You can use multivalues in conditional clauses as a sort of “or”
+operator, consider the following example:
+
+@example
+> @{<[1 @{2 3@}]> 7 <1..7> 1..6@}
+≡ @{<[1 @{2 3@}]> 7 <1 2 3 4 5 6 7> 1 2 3 4 5 6@}
+⇒ 7 1 1 6 1 1 2 7 1 1 4 1 3 7 3 4 5 5 1 3 7 6 5 1 4 2 5 1 1 2 7 1 4 6 2 1…
+@end example
+
+Here our first condition says “if last but one realized element is
+@code{1} and after it goes @code{2} or @code{3}, result will be
+@code{7}”.
+
+As always, you can use conditional multivalues inside of any part of
+other conditional multivalues, but sometimes such complex structures are
+difficult to understand for human living being.
+
+Be careful when using empty principles in conditional multivalues! Once
+conditional multivalue happens to choose empty principle, it may hang,
+because this principle won't add any elements and last element will
+remain the same. This may be a desirable situation only when you have
+other elements in your principle, not single repeating conditional
+multivalue.
+
+@node Polymorphic Operators
+@section Polymorphic Operators
+@cindex polymorphic operators
+
+Now you know about all basic elements in ALGA. There are a number of
+operations that can be performed on these elements. You can combine all
+kinds of elements and the operators will behave differently according to
+types of their operands. Thus, we call the operators @dfn{polymorphic}.
+
+All operators in ALGA are infix (or prefix, if unary) and left
+associative. All operators have the same precedence, so they are always
+applied from left to right. However, you can use parenthesis @samp{(}
+and @samp{)} to change order of evaluation.
+
+@menu
+* Basic Arithmetic:: How to add, subtract, multiply, and divide elements.
+* Repetition:: How to repeat elements.
+* Rotation:: How to rotate sections.
+* Reverse:: How to reverse elements.
+@end menu
+
+@node Basic Arithmetic
+@subsection Basic Arithmetic
+@cindex arithmetic operations
+@cindex addition operator
+@cindex subtraction operator
+@cindex multiplication operator
+@cindex division operator
+
+To perform arithmetic operation, put @samp{+}, @samp{-}, @samp{*}, or
+@samp{/} between two elements.
+
+@example
+> 1/3 + 3
+≡ 10/3
+⇒ 10/3 10/3 10/3 10/3 10/3 10/3 10/3 10/3 10/3 10/3 10/3 10/3 10/3 10/3 10/3 10/3 10/3 10/3…
+> 7 + (2 * 2)
+≡ 11
+⇒ 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11…
+> 7 / 2
+≡ 7/2
+⇒ 7/2 7/2 7/2 7/2 7/2 7/2 7/2 7/2 7/2 7/2 7/2 7/2 7/2 7/2 7/2 7/2 7/2 7/2…
+>  (4 - 1) / 0
+≡ 3
+⇒ 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3…
+> 7 - 100
+≡ 0
+⇒ 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0…
+@end example
+
+Note that we don't work with negative numbers in ALGA, so subtraction
+and division work a bit different than you might expect: if difference
+between two values is negative, it will be substituted with
+@code{0}. This is example of “saturation”. If you divide something by
+zero, you will get dividend unchanged.
+
+You can put any element into arithmetic expressions. Different types of
+elements will produce different effects:
+
+@example
+> [1..3] + 10
+≡ 11 12 13
+⇒ 11 12 13 11 12 13 11 12 13 11 12 13 11 12 13 11 12 13…
+> [1..3] + [0 10]
+≡ 1 11 2 12 3 13
+⇒ 1 11 2 12 3 13 1 11 2 12 3 13 1 11 2 12 3 13…
+> [1..3] + @{0 10@}
+≡ @{1 11@} @{2 12@} @{3 13@}
+⇒ 1 12 13 1 12 13 11 2 3 11 12 3 1 2 13 1 2 13…
+> @{1..3@} + [0 10]
+≡ @{[1 11] [2 12] [3 13]@}
+⇒ 1 11 1 11 1 11 1 11 2 12 2 12 1 11 1 11 1 11…
+> @{<1> 2 <2> 1@} + 5
+≡ @{<6> 7 <7> 6@}
+⇒ 6 7 6 7 6 7 6 7 6 7 6 7 6 7 6 7 6 7…
+@end example
+
+General rule for type of result element:
+@itemize
+@item
+if one of operands is a literal value, result will have type of most
+complex operand.
+@item
+if both operands are complex elements (not literal values), then result
+will inherit type of left hand operand.
+@end itemize
+
+In general, we can say that every value of left hand operand is
+“processed” by right hand operand (according to operator), and results
+are collected together to make up result of the same type as left hand
+operand.
+
+@node Repetition
+@subsection Repetition
+@cindex repetition operator
+
+Operator for repetition is @samp{$}. Principles of evaluation are a bit
+different from arithmetic operators:
+
+@example
+> 1 $ 3, 10
+≡ 1 1 1 10
+⇒ 1 1 1 10 1 1 1 10 1 1 1 10 1 1 1 10 1 1…
+> @{1 2@} $ 3, 10
+≡ @{1 2@} @{1 2@} @{1 2@} 10
+⇒ 1 1 1 10 2 1 2 10 1 2 1 10 2 1 1 10 1 1…
+> [1..3] $ 3, 10
+≡ 1 2 3 1 2 3 1 2 3 10
+⇒ 1 2 3 1 2 3 1 2 3 10 1 2 3 1 2 3 1 2…
+> 1 $ @{2 3@}, 10
+≡ @{[1 1] [1 1 1]@} 10
+⇒ 1 1 10 1 1 1 10 1 1 10 1 1 1 10 1 1 10 1…
+> [1..3] $ [2 3 1], 10
+≡ 1 1 2 2 2 3 10
+⇒ 1 1 2 2 2 3 10 1 1 2 2 2 3 10 1 1 2 2…
+> @{1..3@} $ [2 3 1]
+≡ @{1 1 2 2 2 3@}
+⇒ 2 2 2 2 3 2 2 3 2 1 3 1 2 1 3 3 2 2…
+> @{1..3@} $ [@{2@}]
+≡ @{[1 1] [2 2] [3 3]@}
+⇒ 3 3 3 3 1 1 2 2 1 1 2 2 3 3 2 2 3 3…
+@end example
+
+@node Rotation
+@subsection Rotation
+@cindex rotation operator
+
+You also can “rotate” a principle with caret @samp{^} operator, removing
+its former elements that will appear at the end of the principle:
+
+@example
+> [1..3] ^ 1
+≡ 2 3 1
+⇒ 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1…
+> [1..3] ^ @{1 2@}
+≡ @{[2 3 1] [3 1 2]@}
+⇒ 3 1 2 2 3 1 3 1 2 2 3 1 2 3 1 3 1 2…
+> [[1..3] $ 3] ^ [0 2 1]
+≡ 1 2 3 3 1 2 2 3 1
+⇒ 1 2 3 3 1 2 2 3 1 1 2 3 3 1 2 2 3 1…
+@end example
+
+This is so-called left rotation, but you can emulate right-rotation too
+knowing length of given principle. Note that rotation only makes sense
+applied to sections.
+
+@node Reverse
+@subsection Reverse
+@cindex reverse operator
+
+Reverse is the single unary operator in ALGA. It has the highest
+precedence, this means that it is evaluated before all other operators:
+
+@example
+> @@[1..3]
+≡ 3 2 1
+⇒ 3 2 1 3 2 1 3 2 1 3 2 1 3 2 1 3 2 1…
+> @@@{[1 2] [3 4]@}
+≡ @{[2 1] [4 3]@}
+⇒ 4 3 2 1 4 3 4 3 2 1 4 3 4 3 2 1 4 3…
+@end example
+
+As always, arbitrary complex elements can be reversed.
+
+@node GNU Free Documentation License
+@appendix GNU Free Documentation License
+
+@include fdl.texi
+
+@node Concept Index
+@unnumbered Concept Index
+@printindex cp
+
+@bye
