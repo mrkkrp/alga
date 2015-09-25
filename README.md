@@ -3,8 +3,8 @@
 [![License GPL 3](https://img.shields.io/badge/license-GPL_3-green.svg)](http://www.gnu.org/licenses/gpl-3.0.txt)
 [![Build Status](https://travis-ci.org/mrkkrp/alga.svg?branch=master)](https://travis-ci.org/mrkkrp/alga)
 
-*Note: this project is usable, but decent documentation and support for
- Ardour are not done yet. However, it works smoothly with Cubase.*
+*Note: this project is usable, but support for Ardour is not done
+ yet. However, it works smoothly with Cubase.*
 
 How to algorithmically control every aspect of music using familiar, robust
 tools: plugins, DAWs, etc. that have not built with this in mind? I've
