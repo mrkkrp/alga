@@ -19,15 +19,15 @@
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
 module Alga.Translation.Base
-    ( AlgaBackend
-    , AutoMap
-    , AutoBatch
-    , AutoType (..)
-    , AutoTrack (..)
-    , nullTrack
-    , totalDur
-    , topDefs
-    , patchAuto )
+  ( AlgaBackend
+  , AutoMap
+  , AutoBatch
+  , AutoType (..)
+  , AutoTrack (..)
+  , nullTrack
+  , totalDur
+  , topDefs
+  , patchAuto )
 where
 
 import Control.Monad.IO.Class
@@ -35,8 +35,8 @@ import Data.Maybe (isJust, maybeToList)
 import Data.Ratio (numerator, denominator)
 import qualified Data.Map.Lazy as M
 
-import Text.Parsec
-import Text.Parsec.String
+import Text.Megaparsec
+import Text.Megaparsec.String
 import Text.XML.HXT.Core
 
 import Alga.Language (AlgaEnv, setRandGen, getRefs, evalDef)
@@ -47,18 +47,18 @@ type AutoMap     = M.Map String AutoBatch
 type AutoBatch   = M.Map AutoType AutoTrack
 
 data AutoType
-    = Volume
-    | Mute
-    | IGain
-    | Pan
-    | InsertSlot Int Int
-    | SendSlot   Int Int
-    | SynthParam Int
-    deriving (Show, Eq, Ord)
+  = Volume
+  | Mute
+  | IGain
+  | Pan
+  | InsertSlot Int Int
+  | SendSlot   Int Int
+  | SynthParam Int
+  deriving (Show, Eq, Ord)
 
 data AutoTrack = AutoTrack
-    { atVal :: [Double]
-    , atDur :: [Double] }
+  { atVal :: [Double]
+  , atDur :: [Double] }
 
 nullTrack :: AutoTrack -> Bool
 nullTrack AutoTrack { atVal = val, atDur = dur } = null val || null dur
@@ -69,8 +69,8 @@ totalDur AutoTrack { atDur = dur } = sum dur
 topDefs :: Monad m => AlgaEnv m [String]
 topDefs = filter isTopRef <$> getRefs
 
-patchAuto :: MonadIO m =>
-             Int -> Double -> FilePath -> AlgaBackend -> AlgaEnv m Int
+patchAuto :: MonadIO m
+          => Int -> Double -> FilePath -> AlgaBackend -> AlgaEnv m Int
 patchAuto s b file exec = do
   setRandGen s
   refs <- getRefs
@@ -85,10 +85,10 @@ patchAuto s b file exec = do
 
 toMap :: Monad m => Double -> String -> AlgaEnv m [(String, AutoBatch)]
 toMap b n =
-    case parseTopRef n of
-      Nothing      -> return []
-      Just (r, at) -> fmap f . maybeToList <$> evalTrack b n
-        where f x = (r, M.singleton at x)
+  case parseTopRef n of
+    Nothing      -> return []
+    Just (r, at) -> fmap f . maybeToList <$> evalTrack b n
+      where f x = (r, M.singleton at x)
 
 evalTrack :: Monad m => Double -> String -> AlgaEnv m (Maybe AutoTrack)
 evalTrack b valRef = do
@@ -101,39 +101,38 @@ evalTrack b valRef = do
 
 slice :: Double -> AutoTrack -> AutoTrack
 slice b AutoTrack { atVal = val, atDur = dur } =
-    AutoTrack { atVal = take n val, atDur = take n dur }
-    where n              = f 0 0 dur
-          f !i _  []     = i
-          f !i !a (x:xs) = if x + a >= b then succ i else f (succ i) (x + a) xs
+  AutoTrack { atVal = take n val, atDur = take n dur }
+  where n              = f 0 0 dur
+        f !i _  []     = i
+        f !i !a (x:xs) = if x + a >= b then succ i else f (succ i) (x + a) xs
 
 toFloat :: Rational -> Double
 toFloat x = n / d
-    where n = fromIntegral $ numerator   x
-          d = fromIntegral $ denominator x
+  where n = fromIntegral $ numerator   x
+        d = fromIntegral $ denominator x
 
 -- Parsing
 
 isTopRef :: String -> Bool
-isTopRef = isJust . parse' pTopRef'
+isTopRef = isJust . parseMaybe pTopRef'
 
 parseTopRef :: String -> Maybe (String, AutoType)
-parseTopRef = parse' pTopRef
+parseTopRef = parseMaybe pTopRef
 
 pTopRef' :: Parser (String, AutoType)
 pTopRef' = pTopRef <* optional (string durSuffix)
 
 pTopRef :: Parser (String, AutoType)
-pTopRef = (,) <$> many1 (satisfy (/= autoDel)) <* char autoDel <*> pSuffix
+pTopRef = (,) <$> some (satisfy (/= autoDel)) <* char autoDel <*> pSuffix
 
 pSuffix :: Parser AutoType
-pSuffix
-    =  try pVolume
-   <|> try pMute
-   <|> try pIGain
-   <|> try pPan
-   <|> try pInsert
-   <|> try pSend
-   <|> pSynth
+pSuffix =  try pVolume
+       <|> try pMute
+       <|> try pIGain
+       <|> try pPan
+       <|> try pInsert
+       <|> try pSend
+       <|> pSynth
 
 pVolume :: Parser AutoType
 pVolume = string "volume" *> pure Volume
@@ -157,13 +156,7 @@ pSynth :: Parser AutoType
 pSynth = string "p" *> (SynthParam <$> pNum)
 
 pNum :: Parser Int
-pNum = read <$> many1 digit
-
-parse' :: Parser a -> String -> Maybe a
-parse' p str =
-    case parse (p <* eof) "" str of
-      Left  _ -> Nothing
-      Right x -> Just x
+pNum = read <$> some digitChar
 
 durSuffix :: String
 durSuffix = "d"

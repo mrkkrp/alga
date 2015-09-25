@@ -18,87 +18,72 @@
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
 module Alga.Configuration
-    ( Params
-    , parseConfig
-    , lookupCfg )
+  ( Params
+  , parseConfig
+  , lookupCfg )
 where
 
+import Control.Applicative
+import Control.Monad
 import Data.Char (isSpace)
-import Data.Functor.Identity
 import Data.Maybe (fromMaybe, listToMaybe)
 import qualified Data.Map as M
 import qualified Data.Text.Lazy as T
 
-import Text.Parsec
-import Text.Parsec.Language
-import Text.Parsec.Text.Lazy
-import qualified Text.Parsec.Token as Token
+import Text.Megaparsec
+import Text.Megaparsec.Text.Lazy
+import qualified Text.Megaparsec.Lexer as L
 
 type Params = M.Map String String
 
 class Read a => Parsable a where
-    parseValue :: String -> Maybe a
+  parseValue :: String -> Maybe a
 
 instance Parsable String where
-    parseValue = Just
+  parseValue = Just
 
 instance Parsable Int where
-    parseValue = parseNum
+  parseValue = parseNum
 
 instance Parsable Double where
-    parseValue = parseNum
+  parseValue = parseNum
 
 instance Parsable Bool where
-    parseValue "true"  = Just True
-    parseValue "false" = Just False
-    parseValue _       = Nothing
+  parseValue "true"  = Just True
+  parseValue "false" = Just False
+  parseValue _       = Nothing
+
+lookupCfg :: Parsable a => Params -> String -> a -> a
+lookupCfg cfg v d = fromMaybe d $ M.lookup v cfg >>= parseValue
+
+parseNum :: (Num a, Read a) => String -> Maybe a
+parseNum = fmap fst . listToMaybe . reads
 
 parseConfig :: String -> T.Text -> Either String Params
 parseConfig file = either (Left . show) Right . parse pConfig file
 
 pConfig :: Parser Params
-pConfig = M.fromList <$> (whiteSpace *> many pItem <* eof)
+pConfig = M.fromList <$> (sc *> many pItem <* eof)
 
 pItem :: Parser (String, String)
-pItem = (,) <$> identifier <* reservedOp "=" <*> (pString <|> pThing)
+pItem = (,) <$> pIdentifier <* pOperator "=" <*> (pString <|> pThing)
+
+pIdentifier :: Parser String
+pIdentifier = lexeme $ (:) <$> first <*> many other
+  where first = letterChar   <|> char '_'
+        other = alphaNumChar <|> char '_'
+
+pOperator :: String -> Parser String
+pOperator = lexeme . string
+
+pString :: Parser String
+pString = lexeme $ char '"' >> manyTill L.charLiteral (char '"')
 
 pThing :: Parser String
 pThing = lexeme $ many (satisfy $ not . isSpace)
 
-lookupCfg :: Parsable a => Params -> String -> a -> a
-lookupCfg cfg v d = fromMaybe d $ M.lookup v cfg >>= parseValue
-
-lang :: GenLanguageDef T.Text () Identity
-lang = Token.LanguageDef
-       { Token.commentStart    = ""
-       , Token.commentEnd      = ""
-       , Token.commentLine     = "#"
-       , Token.nestedComments  = True
-       , Token.identStart      = letter <|> char '_'
-       , Token.identLetter     = alphaNum <|> char '_'
-       , Token.opStart         = Token.opLetter lang
-       , Token.opLetter        = oneOf "="
-       , Token.reservedNames   = ["true", "false"]
-       , Token.reservedOpNames = ["="]
-       , Token.caseSensitive   = True }
-
-lexer :: Token.GenTokenParser T.Text () Identity
-lexer = Token.makeTokenParser lang
-
-identifier :: Parser String
-identifier = Token.identifier lexer
-
-pString :: Parser String
-pString = Token.stringLiteral lexer
-
-reservedOp :: String -> Parser ()
-reservedOp = Token.reservedOp lexer
-
 lexeme :: Parser a -> Parser a
-lexeme = Token.lexeme lexer
+lexeme = L.lexeme sc
 
-whiteSpace :: Parser ()
-whiteSpace = Token.whiteSpace lexer
-
-parseNum :: (Num a, Read a) => String -> Maybe a
-parseNum = fmap fst . listToMaybe . reads
+sc :: Parser ()
+sc = L.space (void spaceChar) (L.skipLineComment "#") empty
