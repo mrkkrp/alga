@@ -19,17 +19,17 @@
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
 module Alga.Interaction
-    ( AlgaIO
-    , AlgaInt
-    , runAlgaInt
-    , AlgaSt (..)
-    , AlgaCfg (..)
-    , cmdBackend
-    , cmdLoad
-    , cmdMake
-    , interaction
-    , dfltSeed
-    , dfltBeats )
+  ( AlgaIO
+  , AlgaInt
+  , runAlgaInt
+  , AlgaSt (..)
+  , AlgaCfg (..)
+  , cmdBackend
+  , cmdLoad
+  , cmdMake
+  , interaction
+  , dfltSeed
+  , dfltBeats )
 where
 
 import Control.Monad.Reader

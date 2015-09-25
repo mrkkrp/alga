@@ -33,69 +33,69 @@ import Alga.Interaction
 import Alga.Translation (toBackend)
 
 data Opts = Opts
-    { opInterac :: Bool
-    , opBackend :: String
-    , opSeed    :: Int
-    , opBeats   :: Double
-    , opTarget  :: String
-    , opLicense :: Bool
-    , opVersion :: Bool
-    , opFiles   :: [String] }
+  { opInterac :: Bool
+  , opBackend :: String
+  , opSeed    :: Int
+  , opBeats   :: Double
+  , opTarget  :: String
+  , opLicense :: Bool
+  , opVersion :: Bool
+  , opFiles   :: [String] }
 
 main :: IO ()
 main = execParser opts >>= f
-    where f Opts { opLicense = True } = T.putStr license
-          f Opts { opVersion = True } = F.print "ALGA {}\n" (F.Only version)
-          f Opts { opFiles   = []
-                 , opBackend = β    } = g β $ interaction version
-          f Opts { opInterac = True
-                 , opBackend = β
-                 , opFiles   = ns   } = g β $ cmdLoad ns >> interaction version
-          f Opts { opBackend = β
-                 , opSeed    = s
-                 , opBeats   = b
-                 , opTarget  = trg
-                 , opFiles   = ns   } = g β $ cmdLoad ns >> cmdMake s b trg
-          g β x   = T.putStrLn notice >> runAlga (ξ β >> x)
-          ξ β     = unless (null β) (cmdBackend β)
-          version = "0.1.0"
+  where f Opts { opLicense = True } = T.putStr license
+        f Opts { opVersion = True } = F.print "ALGA {}\n" (F.Only version)
+        f Opts { opFiles   = []
+               , opBackend = β    } = g β $ interaction version
+        f Opts { opInterac = True
+               , opBackend = β
+               , opFiles   = ns   } = g β $ cmdLoad ns >> interaction version
+        f Opts { opBackend = β
+               , opSeed    = s
+               , opBeats   = b
+               , opTarget  = trg
+               , opFiles   = ns   } = g β $ cmdLoad ns >> cmdMake s b trg
+        g β x   = T.putStrLn notice >> runAlga (ξ β >> x)
+        ξ β     = unless (null β) (cmdBackend β)
+        version = "0.1.0"
 
 notice :: T.Text
 notice =
-    "ALGA Copyright © 2015 Mark Karpov\n\n\
-    \This program comes with ABSOLUTELY NO WARRANTY. This is free software,\n\
-    \and you are welcome to redistribute it under certain conditions; see\n\
-    \GNU General Public License for details.\n"
+  "ALGA Copyright © 2015 Mark Karpov\n\n\
+  \This program comes with ABSOLUTELY NO WARRANTY. This is free software,\n\
+  \and you are welcome to redistribute it under certain conditions; see\n\
+  \GNU General Public License for details.\n"
 
 license :: T.Text
 license =
-    "ALGA — algorithmic automation for various DAWs.\n\
-    \Copyright © 2015 Mark Karpov\n\
-    \\n\
-    \ALGA is free software: you can redistribute it and/or modify it under the\n\
-    \terms of the GNU General Public License as published by the Free Software\n\
-    \Foundation, either version 3 of the License, or (at your option) any\n\
-    \later version.\n\
-    \\n\
-    \ALGA is distributed in the hope that it will be useful, but WITHOUT ANY\n\
-    \WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS\n\
-    \FOR A PARTICULAR PURPOSE. See the GNU General Public License for more\n\
-    \details.\n\
-    \\n\
-    \You should have received a copy of the GNU General Public License along\n\
-    \with this program. If not, see <http://www.gnu.org/licenses/>.\n"
+  "ALGA — algorithmic automation for various DAWs.\n\
+  \Copyright © 2015 Mark Karpov\n\
+  \\n\
+  \ALGA is free software: you can redistribute it and/or modify it under the\n\
+  \terms of the GNU General Public License as published by the Free Software\n\
+  \Foundation, either version 3 of the License, or (at your option) any\n\
+  \later version.\n\
+  \\n\
+  \ALGA is distributed in the hope that it will be useful, but WITHOUT ANY\n\
+  \WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS\n\
+  \FOR A PARTICULAR PURPOSE. See the GNU General Public License for more\n\
+  \details.\n\
+  \\n\
+  \You should have received a copy of the GNU General Public License along\n\
+  \with this program. If not, see <http://www.gnu.org/licenses/>.\n"
 
 runAlga :: AlgaIO () -> IO ()
 runAlga e = do
   params <- loadConfig
   wdir   <- getCurrentDirectory
   void $ runAlgaInt e
-       AlgaSt { stBackend = toBackend $ lookupCfg params "backend" "default"
-              , stPrevLen = lookupCfg params "prvlen" 18
-              , stSrcFile = lookupCfg params "src"    wdir </> "foo.ga" }
-       AlgaCfg { cfgPrecision = lookupCfg params "precision" 0.01
-               , cfgPrompt    = lookupCfg params "prompt"    "> "
-               , cfgVerbose   = lookupCfg params "verbose"   True }
+    AlgaSt { stBackend = toBackend $ lookupCfg params "backend" "default"
+           , stPrevLen = lookupCfg params "prvlen" 18
+           , stSrcFile = lookupCfg params "src"    wdir </> "foo.ga" }
+    AlgaCfg { cfgPrecision = lookupCfg params "precision" 0.01
+            , cfgPrompt    = lookupCfg params "prompt"    "> "
+            , cfgVerbose   = lookupCfg params "verbose"   True }
 
 loadConfig :: IO Params
 loadConfig = do

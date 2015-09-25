@@ -18,19 +18,19 @@
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
 module Alga.Representation.Base
-    ( extremumAlias
-    , panAlias
-    , commentLine
-    , productOp
-    , divisionOp
-    , sumOp
-    , diffOp
-    , loopOp
-    , rotationOp
-    , reverseOp
-    , rangeOp
-    , defOp
-    , autoDel )
+  ( extremumAlias
+  , panAlias
+  , commentLine
+  , productOp
+  , divisionOp
+  , sumOp
+  , diffOp
+  , loopOp
+  , rotationOp
+  , reverseOp
+  , rangeOp
+  , defOp
+  , autoDel )
 where
 
 extremumAlias :: (String, String)

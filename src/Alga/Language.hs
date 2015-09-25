@@ -18,27 +18,27 @@
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
 module Alga.Language
-    ( SyntaxTree
-    , Sel (..)
-    , Principle
-    , Elt
-    , Element (..)
-    , AlgaEnv (..)
-    , runAlgaEnv
-    , addDef
-    , remDef
-    , clearDefs
-    , getPrin
-    , getSrc
-    , fullSrc
-    , getRefs
-    , purgeEnv
-    , checkRecur
-    , setRandGen
-    , newRandGen
-    , evalDef
-    , eval
-    , toPrin )
+  ( SyntaxTree
+  , Sel (..)
+  , Principle
+  , Elt
+  , Element (..)
+  , AlgaEnv (..)
+  , runAlgaEnv
+  , addDef
+  , remDef
+  , clearDefs
+  , getPrin
+  , getSrc
+  , fullSrc
+  , getRefs
+  , purgeEnv
+  , checkRecur
+  , setRandGen
+  , newRandGen
+  , evalDef
+  , eval
+  , toPrin )
 where
 
 import Alga.Language.SyntaxTree (SyntaxTree, Sel (..))

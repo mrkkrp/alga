@@ -19,10 +19,10 @@
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
 module Alga.Translation
-    ( AlgaBackend
-    , topDefs
-    , patchAuto
-    , toBackend )
+  ( AlgaBackend
+  , topDefs
+  , patchAuto
+  , toBackend )
 where
 
 import Alga.Translation.Base

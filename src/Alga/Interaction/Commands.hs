@@ -21,12 +21,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Alga.Interaction.Commands
-    ( processCmd
-    , completionFunc
-    , cmdBackend
-    , cmdLoad
-    , cmdMake
-    , cmdPrefix )
+  ( processCmd
+  , completionFunc
+  , cmdBackend
+  , cmdLoad
+  , cmdMake
+  , cmdPrefix )
 where
 
 import Control.Exception (SomeException, try)
@@ -37,20 +37,20 @@ import Data.List (elemIndex, isPrefixOf)
 import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Ratio (approxRational)
 import System.Directory
-    ( canonicalizePath
-    , doesDirectoryExist
-    , doesFileExist
-    , getCurrentDirectory
-    , getHomeDirectory
-    , setCurrentDirectory )
+  ( canonicalizePath
+  , doesDirectoryExist
+  , doesFileExist
+  , getCurrentDirectory
+  , getHomeDirectory
+  , setCurrentDirectory )
 import System.Exit (exitSuccess)
 import System.FilePath
-    ( addTrailingPathSeparator
-    , joinPath
-    , replaceExtension
-    , splitDirectories
-    , takeFileName
-    , (</>) )
+  ( addTrailingPathSeparator
+  , joinPath
+  , replaceExtension
+  , splitDirectories
+  , takeFileName
+  , (</>) )
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 
@@ -63,10 +63,10 @@ import Alga.Representation
 import Alga.Translation
 
 data Cmd = Cmd
-    { cmdName :: String
-    , cmdFunc :: String -> AlgaIO ()
-    , cmdDesc :: T.Text
-    , cmdComp :: CompletionScheme }
+  { cmdName :: String
+  , cmdFunc :: String -> AlgaIO ()
+  , cmdDesc :: T.Text
+  , cmdComp :: CompletionScheme }
 
 data Scale = Lin | Log deriving (Eq, Show)
 
@@ -74,32 +74,32 @@ data CompletionScheme = None | Files | Names deriving (Eq, Show)
 
 commands :: [Cmd]
 commands =
-    [ Cmd "backend" cmdBackend "Set backend (name of DAW)"             None
-    , Cmd "cd"      cmdCd      "Change working directory"              Files
-    , Cmd "clear"   cmdClear   "Restore default state of environment"  None
-    , Cmd "def"     cmdDef     "Print definition of given symbol"      Names
-    , Cmd "help"    cmdHelp    "Show this help text"                   None
-    , Cmd "lin"     cmdLin     "Linear scale conversion to ratio"      None
-    , Cmd "load"    cmdLoad'   "Load definitions from given file"      Files
-    , Cmd "log"     cmdLog     "Logarithmic scale conversion to ratio" None
-    , Cmd "make"    cmdMake'   "Patch an XML file"                     Files
-    , Cmd "prvlen"  cmdLength  "Set length of displayed results"       None
-    , Cmd "purge"   cmdPurge   "Remove redundant definitions"          None
-    , Cmd "pwd"     cmdPwd     "Print working directory"               None
-    , Cmd "quit"    cmdQuit    "Quit the interactive environment"      None
-    , Cmd "ratio"   cmdRatio   "Real number to ratio converter"        None
-    , Cmd "save"    cmdSave    "Save current environment in file"      Files
-    , Cmd "udef"    cmdUdef    "Remove definition of given symbol"     Names
-    , Cmd "vol"     cmdVol     "Convert decibels to ratio"             None ]
+  [ Cmd "backend" cmdBackend "Set backend (name of DAW)"             None
+  , Cmd "cd"      cmdCd      "Change working directory"              Files
+  , Cmd "clear"   cmdClear   "Restore default state of environment"  None
+  , Cmd "def"     cmdDef     "Print definition of given symbol"      Names
+  , Cmd "help"    cmdHelp    "Show this help text"                   None
+  , Cmd "lin"     cmdLin     "Linear scale conversion to ratio"      None
+  , Cmd "load"    cmdLoad'   "Load definitions from given file"      Files
+  , Cmd "log"     cmdLog     "Logarithmic scale conversion to ratio" None
+  , Cmd "make"    cmdMake'   "Patch an XML file"                     Files
+  , Cmd "prvlen"  cmdLength  "Set length of displayed results"       None
+  , Cmd "purge"   cmdPurge   "Remove redundant definitions"          None
+  , Cmd "pwd"     cmdPwd     "Print working directory"               None
+  , Cmd "quit"    cmdQuit    "Quit the interactive environment"      None
+  , Cmd "ratio"   cmdRatio   "Real number to ratio converter"        None
+  , Cmd "save"    cmdSave    "Save current environment in file"      Files
+  , Cmd "udef"    cmdUdef    "Remove definition of given symbol"     Names
+  , Cmd "vol"     cmdVol     "Convert decibels to ratio"             None ]
 
 processCmd :: T.Text -> AlgaIO ()
 processCmd txt =
-    case find g commands of
-      Just Cmd { cmdFunc = f } -> f . T.unpack . T.strip $ args
-      Nothing -> liftIO $ F.print "Unknown command, try {}help.\n"
-                         (F.Only cmdPrefix)
-    where g Cmd { cmdName = c } = c == dropCmdPrefix (T.unpack cmd)
-          (cmd, args)           = T.break isSpace (T.strip txt)
+  case find g commands of
+    Just Cmd { cmdFunc = f } -> f . T.unpack . T.strip $ args
+    Nothing -> liftIO $ F.print "Unknown command, try {}help.\n"
+                       (F.Only cmdPrefix)
+  where g Cmd { cmdName = c } = c == dropCmdPrefix (T.unpack cmd)
+        (cmd, args)           = T.break isSpace (T.strip txt)
 
 completionFunc :: L.CompletionFunc AlgaIO
 completionFunc = L.completeWordWithPrev Nothing " " getCompletions
@@ -137,16 +137,16 @@ cmdClear _ = liftEnv clearDefs >> liftIO (T.putStrLn "Environment cleared.")
 
 cmdDef :: String -> AlgaIO ()
 cmdDef arg = mapM_ f (words arg)
-    where f name = liftEnv (getSrc name) >>= liftIO . T.putStr
+  where f name = liftEnv (getSrc name) >>= liftIO . T.putStr
 
 cmdHelp :: String -> AlgaIO ()
 cmdHelp _ = liftIO (T.putStrLn "Available commands:") >> mapM_ f commands
-    where f Cmd { cmdName = c, cmdDesc = d } =
-              liftIO $ F.print "  {}{}{}\n" (cmdPrefix, F.right 24 ' ' c, d)
+  where f Cmd { cmdName = c, cmdDesc = d } =
+          liftIO $ F.print "  {}{}{}\n" (cmdPrefix, F.right 24 ' ' c, d)
 
 cmdLin :: String -> AlgaIO ()
 cmdLin str = pRatio Lin (parseNum a 0) (parseNum b 1) (parseNum s 0)
-    where (a:b:s:_) = parseArgs str
+  where (a:b:s:_) = parseArgs str
 
 cmdLoad' :: String -> AlgaIO ()
 cmdLoad' = cmdLoad . words
@@ -172,15 +172,15 @@ loadOne given = do
 
 cmdLog :: String -> AlgaIO ()
 cmdLog str = pRatio Log (parseNum a 0) (parseNum b e) (parseNum s 0)
-    where (a:b:s:_) = parseArgs str
-          e         = exp 1
+  where (a:b:s:_) = parseArgs str
+        e         = exp 1
 
 cmdMake' :: String -> AlgaIO ()
 cmdMake' str =
-    let (s:b:f:_) = parseArgs str
-    in cmdMake (parseNum s dfltSeed)
-               (parseNum b dfltBeats)
-               f
+  let (s:b:f:_) = parseArgs str
+  in cmdMake (parseNum s dfltSeed)
+             (parseNum b dfltBeats)
+             f
 
 cmdMake :: Int -> Double -> String -> AlgaIO ()
 cmdMake s b f = do
@@ -222,13 +222,13 @@ cmdSave given = do
 
 cmdUdef :: String -> AlgaIO ()
 cmdUdef arg = mapM_ f (words arg)
-    where f name = do
-            liftEnv (remDef name)
-            liftIO (F.print "Definition for '{}' removed.\n" (F.Only name))
+  where f name = do
+          liftEnv (remDef name)
+          liftIO (F.print "Definition for '{}' removed.\n" (F.Only name))
 
 cmdVol :: String -> AlgaIO ()
 cmdVol = pRatio Lin 0 1 . dBToRatio . (`parseNum` 0)
-    where dBToRatio dB = 10 ** (dB / 10)
+  where dBToRatio dB = 10 ** (dB / 10)
 
 pRatio :: Scale -> Double -> Double -> Double -> AlgaIO ()
 pRatio scale a b s = do
@@ -259,8 +259,8 @@ setFileName path = (</> path) <$> liftIO getCurrentDirectory >>= setSrcFile
 
 dropCmdPrefix :: String -> String
 dropCmdPrefix arg
-    | cmdPrefix `isPrefixOf` arg = drop (length cmdPrefix) arg
-    | otherwise = arg
+  | cmdPrefix `isPrefixOf` arg = drop (length cmdPrefix) arg
+  | otherwise = arg
 
 cmdPrefix :: String
 cmdPrefix = ":"

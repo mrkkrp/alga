@@ -19,19 +19,19 @@
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
 module Alga.Language.Environment
-    ( AlgaEnv (..)
-    , runAlgaEnv
-    , addDef
-    , remDef
-    , clearDefs
-    , getPrin
-    , getSrc
-    , fullSrc
-    , getRefs
-    , purgeEnv
-    , checkRecur
-    , setRandGen
-    , newRandGen )
+  ( AlgaEnv (..)
+  , runAlgaEnv
+  , addDef
+  , remDef
+  , clearDefs
+  , getPrin
+  , getSrc
+  , fullSrc
+  , getRefs
+  , purgeEnv
+  , checkRecur
+  , setRandGen
+  , newRandGen )
 where
 
 import Control.Arrow ((***), (>>>))
@@ -50,19 +50,19 @@ import Alga.Representation.Base (extremumAlias, panAlias)
 import Alga.Representation.Show (showDefinition)
 
 data AlgaEnvSt = AlgaEnvSt
-    { stDefs    :: Defs
-    , stRandGen :: TFGen }
+  { stDefs    :: Defs
+  , stRandGen :: TFGen }
 
 type Defs = M.Map String SyntaxTree
 
 newtype AlgaEnv m a = AlgaEnv
-    { unAlgaEnv :: StateT AlgaEnvSt m a }
-    deriving ( Functor
-             , Applicative
-             , Monad
-             , MonadState AlgaEnvSt
-             , MonadTrans
-             , MonadIO )
+  { unAlgaEnv :: StateT AlgaEnvSt m a }
+  deriving ( Functor
+           , Applicative
+           , Monad
+           , MonadState AlgaEnvSt
+           , MonadTrans
+           , MonadIO )
 
 runAlgaEnv :: Monad m => AlgaEnv m a -> m a
 runAlgaEnv e = evalStateT (unAlgaEnv e) AlgaEnvSt
@@ -75,8 +75,8 @@ defaultDefs = M.fromList [ (a, [Value 0])
                          , (l, [Value 0])
                          , (c, [Value (1 % 2)])
                          , (r, [Value 1]) ]
-    where (a, b)    = extremumAlias
-          (l, c, r) = panAlias
+  where (a, b)    = extremumAlias
+        (l, c, r) = panAlias
 
 getDefs :: Monad m => AlgaEnv m Defs
 getDefs = gets stDefs
@@ -107,30 +107,30 @@ getRefs = M.keys <$> getDefs
 
 tDefs :: String -> Defs -> [String]
 tDefs name defs = maybe mzero cm $ name `M.lookup` defs
-    where cm               = (>>= f)
-          f (Value      _) = mempty
-          f (Section    x) = cm x
-          f (Multi      x) = cm x
-          f (CMulti     x) = x >>= (cm *** cm >>> uncurry (<>))
-          f (Reference  x) = return x <> tDefs x defs
-          f (Range    _ _) = mempty
-          f (Product  x y) = f x <> f y
-          f (Division x y) = f x <> f y
-          f (Sum      x y) = f x <> f y
-          f (Diff     x y) = f x <> f y
-          f (Loop     x y) = f x <> f y
-          f (Rotation x y) = f x <> f y
-          f (Reverse    x) = f x
+  where cm               = (>>= f)
+        f (Value      _) = mempty
+        f (Section    x) = cm x
+        f (Multi      x) = cm x
+        f (CMulti     x) = x >>= (cm *** cm >>> uncurry (<>))
+        f (Reference  x) = return x <> tDefs x defs
+        f (Range    _ _) = mempty
+        f (Product  x y) = f x <> f y
+        f (Division x y) = f x <> f y
+        f (Sum      x y) = f x <> f y
+        f (Diff     x y) = f x <> f y
+        f (Loop     x y) = f x <> f y
+        f (Rotation x y) = f x <> f y
+        f (Reverse    x) = f x
 
 purgeEnv :: Monad m => [String] -> AlgaEnv m ()
 purgeEnv tops = f <$> getDefs >>= setDefs
-    where f defs = M.intersection defs $ M.unions [ts, ms defs, defaultDefs]
-          ms     = M.unions . fmap toDefs . zipWith tDefs tops . repeat
-          ts     = toDefs tops
+  where f defs = M.intersection defs $ M.unions [ts, ms defs, defaultDefs]
+        ms     = M.unions . fmap toDefs . zipWith tDefs tops . repeat
+        ts     = toDefs tops
 
 checkRecur :: Monad m => String -> SyntaxTree -> AlgaEnv m Bool
 checkRecur name tree = check <$> getDefs
-    where check = elem name . tDefs name . M.insert name tree
+  where check = elem name . tDefs name . M.insert name tree
 
 setRandGen :: Monad m => Int -> AlgaEnv m ()
 setRandGen x = modify $ \e -> e { stRandGen = mkTFGen x }

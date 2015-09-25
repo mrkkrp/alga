@@ -19,14 +19,14 @@
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
 module Alga.Representation
-    ( Statement (..)
-    , probeAlga
-    , parseAlga
-    , showStatement
-    , showSyntaxTree
-    , showPrinciple
-    , divisionOp
-    , autoDel )
+  ( Statement (..)
+  , probeAlga
+  , parseAlga
+  , showStatement
+  , showSyntaxTree
+  , showPrinciple
+  , divisionOp
+  , autoDel )
 where
 
 import Alga.Representation.Base (divisionOp, autoDel)

@@ -21,26 +21,26 @@
 {-# OPTIONS -fno-warn-orphans #-}
 
 module Alga.Interaction.Base
-    ( AlgaIO
-    , AlgaInt
-    , runAlgaInt
-    , AlgaSt (..)
-    , AlgaCfg (..)
-    , lift
-    , liftEnv
-    , getBackend
-    , setBackend
-    , getPrevLen
-    , setPrevLen
-    , getSrcFile
-    , setSrcFile
-    , getPrecision
-    , getPrompt
-    , getVerbose
-    , dfltSeed
-    , dfltBeats
-    , processDef
-    , pRational )
+  ( AlgaIO
+  , AlgaInt
+  , runAlgaInt
+  , AlgaSt (..)
+  , AlgaCfg (..)
+  , lift
+  , liftEnv
+  , getBackend
+  , setBackend
+  , getPrevLen
+  , setPrevLen
+  , getSrcFile
+  , setSrcFile
+  , getPrecision
+  , getPrompt
+  , getVerbose
+  , dfltSeed
+  , dfltBeats
+  , processDef
+  , pRational )
 where
 
 import Control.Monad.Reader
@@ -57,16 +57,16 @@ import Alga.Translation
 type AlgaIO = AlgaInt IO
 
 newtype AlgaInt m a = AlgaInt
-    { unAlgaInt :: StateT AlgaSt (ReaderT AlgaCfg (AlgaEnv m)) a }
-    deriving ( Functor
-             , Applicative
-             , Monad
-             , MonadState AlgaSt
-             , MonadReader AlgaCfg
-             , MonadIO )
+  { unAlgaInt :: StateT AlgaSt (ReaderT AlgaCfg (AlgaEnv m)) a }
+  deriving ( Functor
+           , Applicative
+           , Monad
+           , MonadState AlgaSt
+           , MonadReader AlgaCfg
+           , MonadIO )
 
 instance MonadTrans AlgaInt where
-    lift = AlgaInt . lift . lift . lift
+  lift = AlgaInt . lift . lift . lift
 
 liftEnv :: (Monad m) => AlgaEnv m a -> AlgaInt m a
 liftEnv = AlgaInt . lift . lift
@@ -75,18 +75,17 @@ deriving instance L.MonadException m => L.MonadException (AlgaEnv m)
 deriving instance L.MonadException m => L.MonadException (AlgaInt m)
 
 data AlgaSt = AlgaSt
-    { stBackend :: AlgaBackend
-    , stPrevLen :: Int
-    , stSrcFile :: String }
+  { stBackend :: AlgaBackend
+  , stPrevLen :: Int
+  , stSrcFile :: String }
 
 data AlgaCfg = AlgaCfg
-    { cfgPrecision :: Double
-    , cfgPrompt    :: String
-    , cfgVerbose   :: Bool }
+  { cfgPrecision :: Double
+  , cfgPrompt    :: String
+  , cfgVerbose   :: Bool }
 
 runAlgaInt :: Monad m => AlgaInt m a -> AlgaSt -> AlgaCfg -> m a
-runAlgaInt m st cfg =
-    runAlgaEnv (runReaderT (evalStateT (unAlgaInt m) st) cfg)
+runAlgaInt m st cfg = runAlgaEnv (runReaderT (evalStateT (unAlgaInt m) st) cfg)
 
 getBackend :: AlgaIO AlgaBackend
 getBackend = gets stBackend
@@ -132,5 +131,5 @@ pRational :: Rational -> String
 pRational x = if d == 1
               then show n
               else show n ++ divisionOp ++ show d
-    where n = numerator   x
-          d = denominator x
+  where n = numerator   x
+        d = denominator x

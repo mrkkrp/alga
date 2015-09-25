@@ -41,26 +41,26 @@ cubaseBackend m = configSysVars [withNoEmptyElemFor nonEmptyElts] >>>
 
 procTrack :: ArrowXml a => AutoMap -> a XmlTree XmlTree
 procTrack m = mthis editTrack $< (trackName >>> arr prepBatch)
-    where editTrack b = g b $<< insertGuids &&& synthGuids
-          g b is ps   = inClass "MAutomationNode" (procAuto b is ps)
-          prepBatch x = (`M.union` ritualVolumeEvent) <$> (x `M.lookup` m)
+  where editTrack b = g b $<< insertGuids &&& synthGuids
+        g b is ps   = inClass "MAutomationNode" (procAuto b is ps)
+        prepBatch x = (`M.union` ritualVolumeEvent) <$> (x `M.lookup` m)
 
 procAuto :: ArrowXml a => AutoBatch -> [String] -> [String] -> a XmlTree XmlTree
 procAuto batch is ps = setInt "Expanded" 1 >>> deleteOld += mkTracks
-    where deleteOld = processChildren (none `when` deletable)
-          deletable = isList "Tracks" <+> isClass "MAutomationTrack"
-          mkTracks  = M.foldlWithKey' f (mkList "Tracks" "obj" []) batch
-          f a k t   = a ++= g k t
-          g k       =
-              case k of
-                Volume         -> volumeEvent
-                Mute           -> muteEvent
-                IGain          -> igainEvent
-                Pan            -> panEvent
-                InsertSlot n s -> mnone' (`iEvent` s) (genInsertDN is n)
-                SendSlot   n s -> sendEvent (genSendDN n) s
-                SynthParam   s -> mnone' (`iEvent` s) (genSynthDN ps)
-          mnone'    = maybe (const none)
+  where deleteOld = processChildren (none `when` deletable)
+        deletable = isList "Tracks" <+> isClass "MAutomationTrack"
+        mkTracks  = M.foldlWithKey' f (mkList "Tracks" "obj" []) batch
+        f a k t   = a ++= g k t
+        g k       =
+            case k of
+              Volume         -> volumeEvent
+              Mute           -> muteEvent
+              IGain          -> igainEvent
+              Pan            -> panEvent
+              InsertSlot n s -> mnone' (`iEvent` s) (genInsertDN is n)
+              SendSlot   n s -> sendEvent (genSendDN n) s
+              SynthParam   s -> mnone' (`iEvent` s) (genSynthDN ps)
+        mnone'    = maybe (const none)
 
 volumeEvent :: ArrowXml a => AutoTrack -> a XmlTree XmlTree
 volumeEvent = addEvent 1025 4 Nothing . fixRange
@@ -83,55 +83,55 @@ sendEvent dn i = addEvent (4096 + i) 5 (Just dn) . bool id fixRange (i == 1)
 addEvent :: ArrowXml a => Int -> Int -> Maybe String ->
             AutoTrack -> a XmlTree XmlTree
 addEvent tag flags dn t =
-    mkObj (Just "MAutomationTrackEvent") na na
-              [ mkInt   "Flags"  32
-              , mkFloat "Start"  0
-              , mkFloat "Length" (durFactor * totalDur t)
-              , mkObj (Just "MAutoListNode") (Just "Node") na
-                [ mkMember "Domain"
-                  [ mkInt "Type" 0 ]
-                , mkList "Events" "obj" (genEvents t) ]
-              , mkAutoTrack dn
-              , unlessNull (mkInt "Height" 42)
-              , mkInt "Tag" tag
-              , unlessNull (mkInt "TrackFlags" flags) ]
-    where unlessNull a = if nullTrack t then none else a
+  mkObj (Just "MAutomationTrackEvent") na na
+            [ mkInt   "Flags"  32
+            , mkFloat "Start"  0
+            , mkFloat "Length" (durFactor * totalDur t)
+            , mkObj (Just "MAutoListNode") (Just "Node") na
+              [ mkMember "Domain"
+                [ mkInt "Type" 0 ]
+              , mkList "Events" "obj" (genEvents t) ]
+            , mkAutoTrack dn
+            , unlessNull (mkInt "Height" 42)
+            , mkInt "Tag" tag
+            , unlessNull (mkInt "TrackFlags" flags) ]
+  where unlessNull a = if nullTrack t then none else a
 
 mkAutoTrack :: ArrowXml a => Maybe String -> a XmlTree XmlTree
 mkAutoTrack dn = ifA (deep $ isAT dn) mkLink mkCmpl
-    where mkCmpl = mkObj (Just "MAutomationTrack") name (Just $ genID dn)
-                   [ mkInt "Connection Type" (maybe 2 (const 7) dn)
-                   , mnone (mkString "Device Name") dn
-                   , mkInt "Read" 1
-                   , mkInt "Write" 0 ]
-          mkLink    = mkObj na name (Just (genID dn)) []
-          name      = Just "Track Device"
+  where mkCmpl = mkObj (Just "MAutomationTrack") name (Just $ genID dn)
+                 [ mkInt "Connection Type" (maybe 2 (const 7) dn)
+                 , mnone (mkString "Device Name") dn
+                 , mkInt "Read" 1
+                 , mkInt "Write" 0 ]
+        mkLink    = mkObj na name (Just (genID dn)) []
+        name      = Just "Track Device"
 
 genEvents :: ArrowXml a => AutoTrack -> [a XmlTree XmlTree]
 genEvents AutoTrack { atVal = val, atDur = dur } = zipWith f val (fixDur dur)
-    where f v d = mkObj (Just "MParamEvent") na na
-                  [mkFloat "Start" d, mkFloat "Value" v]
+  where f v d = mkObj (Just "MParamEvent") na na
+                [mkFloat "Start" d, mkFloat "Value" v]
 
 fixRange :: AutoTrack -> AutoTrack
 fixRange AutoTrack { atVal = val, atDur = dur} = AutoTrack (f <$> val) dur
-    where f = (* 0.78908658027648926)
+  where f = (* 0.78908658027648926)
 
 fixDur :: [Double] -> [Double]
 fixDur = fmap (* durFactor) . reverse . tail . foldl' f []
-    where f []       a = [a,0]
-          f xs@(x:_) a = x + a : xs
+  where f []       a = [a,0]
+        f xs@(x:_) a = x + a : xs
 
 genInsertDN :: [String] -> Int -> Maybe String
 genInsertDN is n = wrap <$> is !!! n
-    where wrap x = concat ["Inserts\\Slot",idx,"\\",x,"-0"]
-          idx    = if n > 0 then " " ++ show (succ n) else ""
+  where wrap x = concat ["Inserts\\Slot",idx,"\\",x,"-0"]
+        idx    = if n > 0 then " " ++ show (succ n) else ""
 
 genSendDN :: Int -> String
 genSendDN n = "Sends\\Slot" ++ if n > 0 then " " ++ show (succ n) else ""
 
 genSynthDN :: [String] -> Maybe String
 genSynthDN ps = wrap <$> ps !!! 0
-    where wrap x = "Slot\\" ++ x ++ "-0"
+  where wrap x = "Slot\\" ++ x ++ "-0"
 
 genID :: Maybe String -> String
 genID = show . (+ 13) . maybe 0 (sum . zipWith (+) [255,510..] . fmap ord)
@@ -177,13 +177,13 @@ synthGuids = guidsIn $ isMember "Synth Slot"
 
 guidsIn :: ArrowXml a => a XmlTree XmlTree -> a XmlTree [String]
 guidsIn a =
-    listA $ getChildren         >>>
-    isAnyClass tracks           />
-    isMember "DeviceAttributes" />
-    a                           />
-    isMember "Plugin"           />
-    isMember "Plugin UID"       />
-    getStr   "GUID"
+  listA $ getChildren         >>>
+  isAnyClass tracks           />
+  isMember "DeviceAttributes" />
+  a                           />
+  isMember "Plugin"           />
+  isMember "Plugin UID"       />
+  getStr   "GUID"
 
 getStr :: ArrowXml a => String -> a XmlTree String
 getStr name = isElem >>> hasName "string" >>>
@@ -191,8 +191,8 @@ getStr name = isElem >>> hasName "string" >>>
 
 setInt :: ArrowXml a => String -> Int -> a XmlTree XmlTree
 setInt name val = processChildren $ setVal `when` rightInt
-    where setVal   = addAttr "value" (show val)
-          rightInt = isElem >>> hasName "int" >>> hasAttrValue "name" (== name)
+  where setVal   = addAttr "value" (show val)
+        rightInt = isElem >>> hasName "int" >>> hasAttrValue "name" (== name)
 
 -- Special Primitives
 
