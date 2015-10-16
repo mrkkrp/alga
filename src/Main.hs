@@ -20,7 +20,9 @@
 module Main (main) where
 
 import Control.Monad
+import Data.Version (showVersion)
 import Options.Applicative
+import Paths_alga (version)
 import System.Directory (getHomeDirectory, doesFileExist, getCurrentDirectory)
 import System.FilePath
 import qualified Data.Map as M
@@ -45,20 +47,20 @@ data Opts = Opts
 main :: IO ()
 main = execParser opts >>= f
   where f Opts { opLicense = True } = T.putStr license
-        f Opts { opVersion = True } = F.print "ALGA {}\n" (F.Only version)
+        f Opts { opVersion = True } = F.print "ALGA {}\n" (F.Only ver)
         f Opts { opFiles   = []
-               , opBackend = β    } = g β $ interaction version
+               , opBackend = β    } = g β $ interaction ver
         f Opts { opInterac = True
                , opBackend = β
-               , opFiles   = ns   } = g β $ cmdLoad ns >> interaction version
+               , opFiles   = ns   } = g β $ cmdLoad ns >> interaction ver
         f Opts { opBackend = β
                , opSeed    = s
                , opBeats   = b
                , opTarget  = trg
                , opFiles   = ns   } = g β $ cmdLoad ns >> cmdMake s b trg
         g β x   = T.putStrLn notice >> runAlga (ξ β >> x)
-        ξ β     = unless (null β) (cmdBackend β)
-        version = "0.1.0"
+        ξ β = unless (null β) (cmdBackend β)
+        ver = showVersion version
 
 notice :: T.Text
 notice =

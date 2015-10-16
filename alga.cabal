@@ -118,6 +118,9 @@ executable alga
                    , StandaloneDeriving
                    , TupleSections
                    , TypeSynonymInstances
+  other-modules:     Alga.Interaction
+                   , Alga.Interaction.Base
+                   , Alga.Interaction.Commands
   default-language:  Haskell2010
 
 test-suite tests

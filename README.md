@@ -46,6 +46,12 @@ automation tracks in place.
    # sh install.sh
    ```
 
+   or (if you use Stack):
+
+   ```
+   $ stack build
+   ```
+
 5. Done (you can use `uninstall.sh` to uninstall the program).
 
 ## Example

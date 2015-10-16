@@ -119,6 +119,10 @@ $ cabal install --only-dependencies
 $ cabal build
 # sh install.sh
 @end example
+or (if you use Stack):
+@example
+$ stack build
+@end example
 @item
 Done (you can use @code{uninstall.sh} to uninstall the program).
 @end enumerate
