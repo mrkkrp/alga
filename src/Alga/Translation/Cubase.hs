@@ -36,8 +36,9 @@ infixr 5 />/
 infixl 9 !!!
 
 cubaseBackend :: AlgaBackend
-cubaseBackend m = configSysVars [withNoEmptyElemFor nonEmptyElts] >>>
-                  "tracklist" />/ inList "track" ("obj" />/ procTrack m)
+cubaseBackend m =
+  configSysVars [withNoEmptyElemFor nonEmptyElts] >>>
+  "tracklist" />/ inList "track" ("obj" />/ procTrack m)
 
 procTrack :: ArrowXml a => AutoMap -> a XmlTree XmlTree
 procTrack m = mthis editTrack $< (trackName >>> arr prepBatch)
@@ -52,14 +53,14 @@ procAuto batch is ps = setInt "Expanded" 1 >>> deleteOld += mkTracks
         mkTracks  = M.foldlWithKey' f (mkList "Tracks" "obj" []) batch
         f a k t   = a ++= g k t
         g k       =
-            case k of
-              Volume         -> volumeEvent
-              Mute           -> muteEvent
-              IGain          -> igainEvent
-              Pan            -> panEvent
-              InsertSlot n s -> mnone' (`iEvent` s) (genInsertDN is n)
-              SendSlot   n s -> sendEvent (genSendDN n) s
-              SynthParam   s -> mnone' (`iEvent` s) (genSynthDN ps)
+          case k of
+            Volume         -> volumeEvent
+            Mute           -> muteEvent
+            IGain          -> igainEvent
+            Pan            -> panEvent
+            InsertSlot n s -> mnone' (`iEvent` s) (genInsertDN is n)
+            SendSlot   n s -> sendEvent (genSendDN n) s
+            SynthParam   s -> mnone' (`iEvent` s) (genSynthDN ps)
         mnone'    = maybe (const none)
 
 volumeEvent :: ArrowXml a => AutoTrack -> a XmlTree XmlTree
@@ -104,8 +105,8 @@ mkAutoTrack dn = ifA (deep $ isAT dn) mkLink mkCmpl
                  , mnone (mkString "Device Name") dn
                  , mkInt "Read" 1
                  , mkInt "Write" 0 ]
-        mkLink    = mkObj na name (Just (genID dn)) []
-        name      = Just "Track Device"
+        mkLink = mkObj na name (Just (genID dn)) []
+        name   = Just "Track Device"
 
 genEvents :: ArrowXml a => AutoTrack -> [a XmlTree XmlTree]
 genEvents AutoTrack { atVal = val, atDur = dur } = zipWith f val (fixDur dur)
@@ -186,11 +187,12 @@ guidsIn a =
   getStr   "GUID"
 
 getStr :: ArrowXml a => String -> a XmlTree String
-getStr name = isElem >>> hasName "string" >>>
-              hasAttrValue "name" (== name) >>> getAttrValue "value"
+getStr name =
+  isElem >>> hasName "string" >>> hasAttrValue "name" (== name) >>>
+  getAttrValue "value"
 
 setInt :: ArrowXml a => String -> Int -> a XmlTree XmlTree
-setInt name val = processChildren $ setVal `when` rightInt
+setInt name val  = processChildren $ setVal `when` rightInt
   where setVal   = addAttr "value" (show val)
         rightInt = isElem >>> hasName "int" >>> hasAttrValue "name" (== name)
 
