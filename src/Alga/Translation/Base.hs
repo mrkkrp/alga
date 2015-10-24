@@ -38,6 +38,7 @@ import qualified Data.Map.Lazy as M
 import Text.Megaparsec
 import Text.Megaparsec.String
 import Text.XML.HXT.Core
+import qualified Text.Megaparsec.Lexer as L
 
 import Alga.Language (AlgaEnv, setRandGen, getRefs, evalDef)
 import Alga.Representation (autoDel)
@@ -156,7 +157,7 @@ pSynth :: Parser AutoType
 pSynth = string "p" *> (SynthParam <$> pNum)
 
 pNum :: Parser Int
-pNum = read <$> some digitChar
+pNum = fromIntegral <$> L.integer
 
 durSuffix :: String
 durSuffix = "d"
