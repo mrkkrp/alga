@@ -21,14 +21,15 @@ module Main (main) where
 
 import Control.Monad
 import Data.Version (showVersion)
-import Options.Applicative
 import Paths_alga (version)
 import System.Directory (getHomeDirectory, doesFileExist, getCurrentDirectory)
 import System.FilePath
 import qualified Data.Map as M
-import qualified Data.Text.Format as F
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
+
+import Formatting
+import Options.Applicative
 
 import Alga.Configuration
 import Alga.Interaction
@@ -47,7 +48,7 @@ data Opts = Opts
 main :: IO ()
 main = execParser opts >>= f
   where f Opts { opLicense = True } = T.putStr license
-        f Opts { opVersion = True } = F.print "ALGA {}\n" (F.Only ver)
+        f Opts { opVersion = True } = fprint ("ALGA " % string % "\n") ver
         f Opts { opFiles   = []
                , opBackend = β    } = g β $ interaction ver
         f Opts { opInterac = True

@@ -54,7 +54,7 @@ import System.FilePath
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 
-import qualified Data.Text.Format as F
+import Formatting
 import qualified System.Console.Haskeline as L
 
 import Alga.Interaction.Base
@@ -96,8 +96,8 @@ processCmd :: T.Text -> AlgaIO ()
 processCmd txt =
   case find g commands of
     Just Cmd { cmdFunc = f } -> f . T.unpack . T.strip $ args
-    Nothing -> liftIO $ F.print "Unknown command, try {}help.\n"
-                       (F.Only cmdPrefix)
+    Nothing -> liftIO $
+               fprint ("Unknown command, try " % string % "help.\n") cmdPrefix
   where g Cmd { cmdName = c } = c == dropCmdPrefix (T.unpack cmd)
         (cmd, args)           = T.break isSpace (T.strip txt)
 
@@ -129,8 +129,8 @@ cmdCd path = liftIO $ do
   if present
   then do corrected <- canonicalizePath new
           setCurrentDirectory corrected
-          F.print "Changed to \"{}\".\n" (F.Only corrected)
-  else F.print "Cannot cd to \"{}\".\n" (F.Only new)
+          fprint ("Changed to \"" % string % "\".\n") corrected
+  else fprint ("Cannot cd to \"" % string % "\".\n") new
 
 cmdClear :: String -> AlgaIO ()
 cmdClear _ = liftEnv clearDefs >> liftIO (T.putStrLn "Environment cleared.")
@@ -141,8 +141,8 @@ cmdDef arg = mapM_ f (words arg)
 
 cmdHelp :: String -> AlgaIO ()
 cmdHelp _ = liftIO (T.putStrLn "Available commands:") >> mapM_ f commands
-  where f Cmd { cmdName = c, cmdDesc = d } =
-          liftIO $ F.print "  {}{}{}\n" (cmdPrefix, F.right 24 ' ' c, d)
+  where f Cmd { cmdName = c, cmdDesc = d } = liftIO $ fprint fmt cmdPrefix c d
+        fmt = ("  " % string % (right 24 ' ' %. string) % text % "\n")
 
 cmdLin :: String -> AlgaIO ()
 cmdLin str = pRatio Lin (parseNum a 0) (parseNum b 1) (parseNum s 0)
@@ -163,10 +163,11 @@ loadOne given = do
           case parseAlga (takeFileName file) contents of
             Right x -> do mapM_ f x
                           setFileName file
-                          liftIO $ F.print "\"{}\" loaded successfully.\n"
-                                 (F.Only file)
-            Left  x -> liftIO $ F.print "Parse error in {}.\n" (F.Only x)
-  else liftIO $ F.print "Could not find \"{}\".\n" (F.Only file)
+                          liftIO $ fprint
+                                 ("\"" % string % "\" loaded successfully.\n")
+                                 file
+            Left  x -> liftIO $ fprint ("Parse error in " % string % ".\n") x
+  else liftIO $ fprint ("Could not find \"" % string % "\".\n") file
     where f (Definition n t) = processDef n t
           f (Exposition   _) = return ()
 
@@ -188,9 +189,9 @@ cmdMake s b f = do
   backend <- getBackend
   status  <- liftEnv $ patchAuto s b file backend
   let msg = if status == 0
-            then "File patched sucessfully \"{}\".\n"
-            else "Failed to patch file \"{}\".\n"
-  liftIO $ F.print msg (F.Only file)
+            then "File patched successfully \"" % string % "\".\n"
+            else "Failed to patch file \"" % string % "\".\n"
+  liftIO $ fprint msg file
 
 cmdLength :: String -> AlgaIO ()
 cmdLength x = getPrevLen >>= setPrevLen . parseNum x
@@ -215,16 +216,17 @@ cmdSave given = do
   file   <- output given ""
   src    <- liftEnv fullSrc
   result <- liftIO (try (T.writeFile file src) :: IO (Either SomeException ()))
+  let fmt = "Environment saved as \"" % string % "\".\n"
   case result of
-    Right _ -> setFileName file >>
-               liftIO (F.print "Environment saved as \"{}\".\n" (F.Only file))
+    Right _ -> do setFileName file
+                  liftIO $ fprint fmt file
     Left  e -> spitExc e
 
 cmdUdef :: String -> AlgaIO ()
 cmdUdef arg = mapM_ f (words arg)
   where f name = do
           liftEnv (remDef name)
-          liftIO (F.print "Definition for '{}' removed.\n" (F.Only name))
+          liftIO $ fprint ("Definition for «" % string % "» removed.\n") name
 
 cmdVol :: String -> AlgaIO ()
 cmdVol = pRatio Lin 0 1 . dBToRatio . (`parseNum` 0)
@@ -237,7 +239,7 @@ pRatio scale a b s = do
             Lin -> (s - a) / (b - a)
             Log -> (log s - log a) / (log b - log a)
       x = approxRational σ ε
-  liftIO $ F.print "≈ {}\n" (F.Only $ pRational x)
+  liftIO $ fprint ("≈ " % string % "\n") (pRational x)
 
 parseArgs :: String -> [String]
 parseArgs str = words str ++ repeat ""
@@ -266,4 +268,4 @@ cmdPrefix :: String
 cmdPrefix = ":"
 
 spitExc :: SomeException -> AlgaIO ()
-spitExc = liftIO . F.print "× {}.\n" . F.Only . show
+spitExc = liftIO . fprint ("× " % string % ".\n") . show
