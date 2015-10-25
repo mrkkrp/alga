@@ -41,8 +41,14 @@ echo 'ok'
 
 # 2. check if there is compiled executable
 
+alga_app="$(find .stack-work/dist/ -name alga -type f)"
+
+if test -z $alga_app
+then alga_app=dist/build/alga/alga
+fi
+
 echo -n 'searching for executable...'
-test -f dist/build/alga/alga || bad_exit
+test -f $alga_app || bad_exit
 echo 'ok'
 
 # 3. creating directories
@@ -57,10 +63,10 @@ fi
 # 4. copying new files
 
 echo 'copying new files...'
-install -vsDm755 dist/build/alga/alga /usr/bin/
-install -vDm644  LICENSE.md           /usr/share/licenses/alga/
-install -vDm644  doc/*.{texi,html}    /usr/share/doc/alga/
-install -vDm644  doc/alga.1.gz        /usr/share/man/man1/
+install -vsDm755 $alga_app         /usr/bin/
+install -vDm644  LICENSE.md        /usr/share/licenses/alga/
+install -vDm644  doc/*.{texi,html} /usr/share/doc/alga/
+install -vDm644  doc/alga.1.gz     /usr/share/man/man1/
 echo 'copying new files: ok'
 
 # 5. done
