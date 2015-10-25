@@ -166,7 +166,7 @@ loadOne given = do
                           liftIO $ fprint
                                  ("\"" % string % "\" loaded successfully.\n")
                                  file
-            Left  x -> liftIO $ fprint ("Parse error in " % string % ".\n") x
+            Left  x -> liftIO $ fprint (string % "\n") x
   else liftIO $ fprint ("Could not find \"" % string % "\".\n") file
     where f (Definition n t) = processDef n t
           f (Exposition   _) = return ()
@@ -224,9 +224,9 @@ cmdSave given = do
 
 cmdUdef :: String -> AlgaIO ()
 cmdUdef arg = mapM_ f (words arg)
-  where f name = do
-          liftEnv (remDef name)
-          liftIO $ fprint ("Definition for «" % string % "» removed.\n") name
+  where f name = do liftEnv $ remDef name
+                    liftIO $ fprint fmt name
+        fmt = "Definition for «" % string % "» removed.\n"
 
 cmdVol :: String -> AlgaIO ()
 cmdVol = pRatio Lin 0 1 . dBToRatio . (`parseNum` 0)

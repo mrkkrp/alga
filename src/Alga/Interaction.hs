@@ -85,11 +85,11 @@ processExpr expr = do
                  verbose <- getVerbose
                  result  <- liftEnv $ eval t
                  prin    <- liftEnv $ toPrin t
-                 liftIO $ when verbose
-                            (fprint ("≡ " % text) (showPrinciple prin))
+                 liftIO $ when verbose $
+                            fprint ("≡ " % text) (showPrinciple prin)
                  spitList $ take len result
 
 spitList :: [Rational] -> AlgaIO ()
 spitList [] = liftIO $ T.putStrLn "⇒ ⊥"
 spitList xs = liftIO $ fprint ("⇒ " % string % "…\n") l
-  where l = unwords $ fmap pRational xs
+  where l = unwords $ pRational <$> xs
