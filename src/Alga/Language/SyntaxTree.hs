@@ -22,20 +22,28 @@ module Alga.Language.SyntaxTree
   , Sel (..) )
 where
 
+import Alga.Language.Element (NRatio)
+
+-- | Syntax tree in our case is just a collection of syntactic elements.
+
 type SyntaxTree = [Sel]
 
-data Sel -- syntactic element
-  = Value     Rational
-  | Section   [Sel]
-  | Multi     [Sel]
-  | CMulti    [([Sel], [Sel])]
-  | Reference String
-  | Range     Rational Rational
-  | Product   Sel Sel
-  | Division  Sel Sel
-  | Sum       Sel Sel
-  | Diff      Sel Sel
-  | Loop      Sel Sel
-  | Rotation  Sel Sel
-  | Reverse   Sel
+-- | Syntactic element corresponds to language features. Some of them have
+-- direct corresponding constructor in 'Alga.Language.Element.Element',
+-- others have to be simplified first.
+
+data Sel
+  = Value     NRatio   -- ^ Literal value
+  | Section   [Sel]    -- ^ Section
+  | Multi     [Sel]    -- ^ Multivalue
+  | CMulti    [([Sel], [Sel])] -- ^ Conditional multivalue
+  | Reference String   -- ^ Reference (name of variable)
+  | Range     NRatio NRatio -- ^ Range of values
+  | Product   Sel Sel  -- ^ Product of principles
+  | Division  Sel Sel  -- ^ Division of principles
+  | Sum       Sel Sel  -- ^ Sum of principles
+  | Diff      Sel Sel  -- ^ Subtraction of principles
+  | Loop      Sel Sel  -- ^ Loop
+  | Rotation  Sel Sel  -- ^ Rotation
+  | Reverse   Sel      -- ^ Reversed principle
     deriving (Eq, Show)

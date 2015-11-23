@@ -21,9 +21,10 @@ module Alga.Language
   ( SyntaxTree
   , Sel (..)
   , Principle
-  , Elt
+  , NRatio
   , Element (..)
-  , AlgaEnv (..)
+  , AlgaEnv
+  , HasEnv (..)
   , runAlgaEnv
   , addDef
   , remDef
@@ -34,14 +35,12 @@ module Alga.Language
   , getRefs
   , purgeEnv
   , checkRecur
-  , setRandGen
-  , newRandGen
   , evalDef
   , eval
   , toPrin )
 where
 
 import Alga.Language.SyntaxTree (SyntaxTree, Sel (..))
-import Alga.Language.Element (Principle, Elt, Element (..))
+import Alga.Language.Element (Principle, NRatio, Element (..))
 import Alga.Language.Environment
 import Alga.Language.Eval (evalDef, eval, toPrin)

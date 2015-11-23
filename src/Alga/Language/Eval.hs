@@ -25,88 +25,131 @@ module Alga.Language.Eval
   , toPrin )
 where
 
+import Alga.Language.Element
+import Alga.Language.Environment
+import Alga.Language.SyntaxTree
 import Control.Arrow ((***))
 import Control.Monad.State.Lazy
 import Data.List (tails)
 import Data.Maybe (listToMaybe)
 import Data.Monoid ((<>))
 import System.Random (next)
-
 import System.Random.TF (TFGen)
 
-import Alga.Language.SyntaxTree
-import Alga.Language.Element
-import Alga.Language.Environment
+-- | State record used for calculation\/evaluation of principles.
 
 data CalcSt = CalcSt
-  { clcHistory :: [Rational]
-  , clcRandGen :: TFGen }
+  { clHistory :: [NRatio] -- ^ Recently evaluated values
+  , clRandGen :: TFGen     -- ^ Local random generator
+  } deriving Show
 
-newtype Calc a = Calc
-  { unCalc :: State CalcSt a }
-  deriving ( Functor
-           , Applicative
-           , Monad
-           , MonadState CalcSt )
+-- | Evaluate definition given its name.
 
-evalDef :: Monad m => String -> AlgaEnv m [Rational]
+evalDef :: HasEnv m
+  => String            -- ^ Reference name
+  -> m [NRatio]        -- ^ Infinite stream of naturals or empty list
 evalDef name = getPrin name >>= eval
 
-eval :: Monad m => SyntaxTree -> AlgaEnv m [Rational]
+-- | Evaluate given syntax tree.
+
+eval :: HasEnv m
+  => SyntaxTree        -- ^ Syntax tree
+  -> m [NRatio]        -- ^ Infinite stream of ratios or empty list
 eval tree = liftM2 runCalc (resolve . cycle' <$> toPrin tree) newRandGen
   where cycle' p = if null $ foldMap (:[]) (Sec p) then [] else cycle p
 
-resolve :: Principle -> Calc [Rational]
+-- | Resolve principle into stream of naturals.
+
+resolve :: MonadState CalcSt m
+  => Principle         -- ^ Principle in question
+  -> m [NRatio]        -- ^ Stream of naturals
 resolve [] = return []
 resolve xs = concat <$> mapM f xs
   where f (Val  x) = addHistory x >> return [x]
         f (Sec  x) = resolve x
         f (Mul  x) = choice x >>= maybe (return []) f
         f (CMul x) = listToMaybe <$> filterM (matchHistory . fst) x >>=
-                     maybe (f . toMul $ x) (f . Mul . snd)
+          maybe (f . toMul $ x) (f . Mul . snd)
 
-runCalc :: Calc a -> TFGen -> a
-runCalc clc gen = evalState (unCalc clc)
-                  CalcSt { clcHistory = mempty
-                         , clcRandGen = gen }
+-- | Run lazy state monad with 'CalcSt' state.
 
-choice :: [a] -> Calc (Maybe a)
+runCalc
+  :: State CalcSt a    -- ^ Monad to run
+  -> TFGen             -- ^ Initial random generator
+  -> a                 -- ^ Result
+runCalc m gen = evalState m CalcSt
+  { clHistory = mempty
+  , clRandGen = gen }
+
+-- | Random choice between given options.
+
+choice :: MonadState CalcSt m
+  => [a]               -- ^ Options to choose from
+  -> m (Maybe a)       -- ^ Result
 choice [] = return Nothing
 choice xs = do
-  (n, g) <- next <$> gets clcRandGen
-  modify $ \c -> c { clcRandGen = g }
+  (n, g) <- next <$> gets clRandGen
+  modify $ \c -> c { clRandGen = g }
   return . Just $ xs !! (abs n `rem` length xs)
 
-condMatch :: [Rational] -> Elt -> Bool
+-- | Check if given elements “matches” history of generated values. This
+-- is for conditional multivalues, see manual for more information.
+--
+-- Note: head of history is the most recently evaluated element.
+
+condMatch :: [NRatio] -> Element NRatio -> Bool
 condMatch []    _        = False
 condMatch (h:_) (Val  x) = h == x
 condMatch hs    (Sec  x) = and $ zipWith condMatch (tails hs) (reverse x)
 condMatch hs    (Mul  x) = or  $ condMatch hs <$> x
 condMatch hs    (CMul x) = condMatch hs (toMul x)
 
-toMul :: [([Elt], [Elt])] -> Elt
+-- | Convert internals of conditional multivalue into plain multivalue.
+
+toMul
+  :: [([Element NRatio], [Element NRatio])] -- ^ Pattern\/result pairs
+  -> Element NRatio    -- ^ Internals of plain multivalue
 toMul xs = Mul (xs >>= snd)
 
-matchHistory :: [Elt] -> Calc Bool
+-- | A monadic wrapper around 'condMatch'.
+
+matchHistory :: MonadState CalcSt m
+  => [Element NRatio]  -- ^ Stream of elements to test
+  -> m Bool            -- ^ Do they match history?
 matchHistory x = do
-  hs <- gets clcHistory
+  hs <- gets clHistory
   return . or $ condMatch hs <$> x
 
-addHistory :: Rational -> Calc ()
-addHistory x = modify $ \c -> c { clcHistory = return x <> clcHistory c }
+-- | Add evaluated value to history.
 
-toPrin :: Monad m => SyntaxTree -> AlgaEnv m Principle
+addHistory :: MonadState CalcSt m => NRatio -> m ()
+addHistory x = modify $ \c -> c { clHistory = return x <> clHistory c }
+
+-- | Transform 'SyntaxTree' into 'Principle' applying all necessary
+-- transformations and resolving references.
+
+toPrin :: HasEnv m
+  => SyntaxTree        -- ^ Syntax tree to transform
+  -> m Principle       -- ^ Resulting principle
 toPrin = fmap simplifySec . toPrin'
+
+-- | Simplify section. There are several simple transformations that are
+-- proven to preserve the same resulting stream of naturals.
 
 simplifySec :: Principle -> Principle
 simplifySec = (>>= f)
   where f (Sec xs) = simplifySec xs
         f x        = simplifyElt x
 
+-- | Basic simplification of principles.
+
 simplify :: Principle -> Principle
 simplify = (>>= simplifyElt)
 
-simplifyElt :: Elt -> Principle
+-- | Simplification of single element. Note that single element can produce
+-- several elements after simplification.
+
+simplifyElt :: Element NRatio -> Principle
 simplifyElt x@(Val _)        = [x]
 simplifyElt (Sec  [x])       = simplify [x]
 simplifyElt (Mul  [x])       = simplify [x]
@@ -115,7 +158,11 @@ simplifyElt (Sec  xs)        = [Sec (simplifySec xs)]
 simplifyElt (Mul  xs)        = [Mul (simplify xs)]
 simplifyElt (CMul xs)        = [CMul ((simplify *** simplify) <$> xs)]
 
-toPrin' :: Monad m => SyntaxTree -> AlgaEnv m Principle
+-- | The meat of the algorithm that transforms 'SyntaxTree' into 'Principle'.
+
+toPrin' :: HasEnv m
+  => SyntaxTree        -- ^ Syntax tree to transform
+  -> m Principle       -- ^ Resulting principle
 toPrin' = liftM concat . mapM f
   where
     fPair (c, x)     = (,) <$> toPrin' c <*> toPrin' x
@@ -138,29 +185,39 @@ toPrin' = liftM concat . mapM f
     adu _ []         = []
     adu g (x:xs)     = g x : xs
 
-sdiv :: Rational -> Rational -> Rational
+-- | Saturated division.
+
+sdiv :: NRatio -> NRatio -> NRatio
 sdiv x 0 = x
 sdiv x y = x / y
 
-sdif :: Rational -> Rational -> Rational
+-- | Saturated subtraction.
+
+sdif :: NRatio -> NRatio -> NRatio
 sdif x y
   | x < y     = 0
   | otherwise = x - y
 
-loop :: Elt -> Elt -> Principle
+-- | Concept of looping.
+
+loop :: Element NRatio -> Element NRatio -> Principle
 loop x       (Val y) = replicate (floor y) x
 loop x       (Mul y) = [Mul $ Sec . loop x <$> y]
 loop (Sec x) (Sec y) = [Sec . concat $ zipWith loop x (cycle y)]
 loop (Mul x) (Sec y) = [Mul . concat $ zipWith loop x (cycle y)]
 loop x       _       = [x]
 
-rotate :: Elt -> Elt -> Elt
+-- | Concept of rotation.
+
+rotate :: Element NRatio -> Element NRatio -> Element NRatio
 rotate (Sec   x) (Val y) = Sec $ zipWith const (drop (floor y) (cycle x)) x
 rotate x@(Sec _) (Mul y) = Mul $ rotate x <$> y
 rotate (Sec   x) (Sec y) = Sec $ zipWith rotate x (cycle y)
 rotate x         _       = x
 
-reverse' :: Elt -> Elt
+-- | Concept of reversion for elements.
+
+reverse' :: Element NRatio -> Element NRatio
 reverse' x@(Val _) = x
 reverse' (Mul   x) = Mul  $ reverse' <$> x
 reverse' (Sec   x) = Sec  $ reverse $ reverse' <$> x

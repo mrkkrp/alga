@@ -18,22 +18,36 @@
 -- You should have received a copy of the GNU General Public License along
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveFunctor  #-}
+
 module Alga.Language.Element
   ( Principle
-  , Elt
+  , NRatio
   , Element (..) )
 where
 
 import Control.Arrow ((***))
+import Data.Ratio (Ratio)
+import Numeric.Natural
 
-type Principle = [Elt]
-type Elt       = Element Rational
+-- | Collection of elements for evaluation, representation of some aspect of
+-- voice.
+
+type Principle = [Element NRatio]
+
+-- | Non-negative rational number is the best choice for our purposes, hence
+-- the synonym.
+
+type NRatio = Ratio Natural
+
+-- | Fundamental type representing an atom for evaluation.
 
 data Element a
-  = Val  a
-  | Sec  [Element a]
-  | Mul  [Element a]
-  | CMul [([Element a], [Element a])]
+  = Val  a             -- ^ Single value, evaluates to itself
+  | Sec  [Element a]   -- ^ Universal container for other values
+  | Mul  [Element a]   -- ^ Multivalue, the way to introduce varying elements
+  | CMul [([Element a], [Element a])] -- ^ Conditional multivalue
     deriving (Eq, Show, Functor, Foldable)
 
 instance Applicative Element where
