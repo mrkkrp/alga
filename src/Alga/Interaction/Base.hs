@@ -18,120 +18,87 @@
 -- You should have received a copy of the GNU General Public License along
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
-{-# OPTIONS -fno-warn-orphans #-}
-
 module Alga.Interaction.Base
-  ( AlgaIO
-  , AlgaInt
-  , runAlgaInt
-  , AlgaSt (..)
+  ( AlgaSt  (..)
   , AlgaCfg (..)
-  , lift
-  , liftEnv
-  , getBackend
-  , setBackend
-  , getPrevLen
-  , setPrevLen
-  , getSrcFile
-  , setSrcFile
-  , getPrecision
-  , getPrompt
-  , getVerbose
-  , dfltSeed
-  , dfltBeats
+  , Alga
+  , runAlga
+  , defaultSeed
+  , defaultBeats
   , processDef
-  , pRational )
+  , showRatio )
 where
-
-import Control.Monad.Reader
-import Control.Monad.State.Strict
-import Data.Ratio (numerator, denominator)
-
-import Formatting
-import qualified System.Console.Haskeline as L
 
 import Alga.Language
 import Alga.Representation
 import Alga.Translation
+import Control.Monad.Reader
+import Control.Monad.State.Strict
+import Data.Ratio (numerator, denominator, Ratio)
+import Formatting
+import Numeric.Natural
+import Path
 
-type AlgaIO = AlgaInt IO
-
-newtype AlgaInt m a = AlgaInt
-  { unAlgaInt :: StateT AlgaSt (ReaderT AlgaCfg (AlgaEnv m)) a }
-  deriving ( Functor
-           , Applicative
-           , Monad
-           , MonadState AlgaSt
-           , MonadReader AlgaCfg
-           , MonadIO )
-
-instance MonadTrans AlgaInt where
-  lift = AlgaInt . lift . lift . lift
-
-liftEnv :: (Monad m) => AlgaEnv m a -> AlgaInt m a
-liftEnv = AlgaInt . lift . lift
-
-deriving instance L.MonadException m => L.MonadException (AlgaEnv m)
-deriving instance L.MonadException m => L.MonadException (AlgaInt m)
+-- | ALGA REPL state.
 
 data AlgaSt = AlgaSt
-  { stBackend :: AlgaBackend
-  , stPrevLen :: Int
-  , stSrcFile :: String }
+  { stBackend :: AlgaBackend -- ^ Selected backend (DAW dependent)
+  , stPrevLen :: Natural -- ^ Length of preview principles
+  , stSrcFile :: Path Abs File -- ^ Name of current source file
+  }
+
+-- | ALGA REPL configuration.
 
 data AlgaCfg = AlgaCfg
-  { cfgPrecision :: Double
-  , cfgPrompt    :: String
-  , cfgVerbose   :: Bool }
+  { cfgPrecision :: Double -- ^ Precision for some REPL utilities
+  , cfgPrompt    :: String -- ^ REPL prompt
+  , cfgVerbose   :: Bool -- ^ Verbose mode?
+  }
 
-runAlgaInt :: Monad m => AlgaInt m a -> AlgaSt -> AlgaCfg -> m a
-runAlgaInt m st cfg = runAlgaEnv (runReaderT (evalStateT (unAlgaInt m) st) cfg)
+-- | A synonym for MIDA monad stack.
 
-getBackend :: AlgaIO AlgaBackend
-getBackend = gets stBackend
+type Alga = StateT AlgaSt (ReaderT AlgaCfg (AlgaEnv IO))
 
-setBackend :: AlgaBackend -> AlgaIO ()
-setBackend x = modify $ \e -> e { stBackend = x }
+-- | Run ALGA monad stack.
 
-getPrevLen :: AlgaIO Int
-getPrevLen = gets stPrevLen
+runAlga
+  :: Alga a            -- ^ ALGA monad stack
+  -> AlgaSt            -- ^ Initial state
+  -> AlgaCfg           -- ^ Configuration
+  -> IO a
+runAlga m st cfg = runAlgaEnv (runReaderT (evalStateT m st) cfg)
 
-setPrevLen :: Int -> AlgaIO ()
-setPrevLen x = modify $ \e -> e { stPrevLen = x }
+-- | Default seed for random number generator.
 
-getSrcFile :: AlgaIO String
-getSrcFile = gets stSrcFile
+defaultSeed :: Natural
+defaultSeed = 0
 
-setSrcFile :: String -> AlgaIO ()
-setSrcFile x = modify $ \e -> e { stSrcFile = x }
+-- | Default duration of automation to calculate in whole notes, note that
+-- this is actually floating point value.
 
-getPrecision :: AlgaIO Double
-getPrecision = asks cfgPrecision
+defaultBeats :: Double
+defaultBeats = 4
 
-getPrompt :: AlgaIO String
-getPrompt = asks cfgPrompt
+-- | Process a principle definition.
 
-getVerbose :: AlgaIO Bool
-getVerbose = asks cfgVerbose
-
-dfltSeed :: Int
-dfltSeed = 0
-
-dfltBeats :: Double
-dfltBeats = 4
-
-processDef :: String -> SyntaxTree -> AlgaIO ()
+processDef :: (HasEnv m, MonadIO m)
+  => String            -- ^ Definition name
+  -> SyntaxTree        -- ^ AST for that definition
+  -> m ()
 processDef n t = do
-  recursive <- liftEnv $ checkRecur n t
+  recursive <- checkRecur n t
   if recursive
   then liftIO $
-       fprint ("Rejected recursive definition for «" % string % "».\n") n
-  else do liftEnv $ addDef n t
+    fprint ("Rejected recursive definition for «" % string % "».\n") n
+  else do addDef n t
           liftIO $ fprint ("• «" % string % "»\n") n
 
-pRational :: Rational -> String
-pRational x = if d == 1
-              then show n
-              else show n ++ divisionOp ++ show d
-  where n = numerator   x
-        d = denominator x
+-- | Render a ratio.
+
+showRatio :: (Integral a, Show a) => Ratio a -> String
+showRatio x =
+  let n = numerator   x
+      d = denominator x
+  in if d == 1
+     then show n
+     else show n ++ divisionOp ++ show d

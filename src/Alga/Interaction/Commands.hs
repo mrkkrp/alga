@@ -18,7 +18,7 @@
 -- You should have received a copy of the GNU General Public License along
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Alga.Interaction.Commands
   ( processCmd
@@ -29,51 +29,63 @@ module Alga.Interaction.Commands
   , cmdPrefix )
 where
 
-import Control.Exception (SomeException, try)
+import Alga.Interaction.Base
+import Alga.Language
+import Alga.Representation
+import Alga.Translation
+import Control.Exception (SomeException)
+import Control.Monad.Catch (try, MonadThrow, fromException, throwM)
 import Control.Monad.IO.Class
+import Control.Monad.Reader
+import Control.Monad.State.Class
 import Data.Char (isSpace)
 import Data.Foldable (find)
 import Data.List (elemIndex, isPrefixOf)
 import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Ratio (approxRational)
+import Data.Text.Lazy (Text)
+import Formatting
+import Numeric.Natural
+import Path
 import System.Directory
-  ( canonicalizePath
-  , doesDirectoryExist
+  ( doesDirectoryExist
   , doesFileExist
   , getCurrentDirectory
   , getHomeDirectory
+  , makeAbsolute
   , setCurrentDirectory )
-import System.Exit (exitSuccess)
-import System.FilePath
-  ( addTrailingPathSeparator
-  , joinPath
-  , replaceExtension
-  , splitDirectories
-  , takeFileName
-  , (</>) )
+import System.Exit (exitSuccess, ExitCode)
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
-
-import Formatting
 import qualified System.Console.Haskeline as L
+import qualified System.FilePath as FP
 
-import Alga.Interaction.Base
-import Alga.Language
-import Alga.Representation
-import Alga.Translation
+-- | Description of REPL command.
 
 data Cmd = Cmd
-  { cmdName :: String
-  , cmdFunc :: String -> AlgaIO ()
-  , cmdDesc :: T.Text
-  , cmdComp :: CompletionScheme }
+  { cmdName :: String  -- ^ Name of command
+  , cmdFunc :: String -> Alga () -- ^ Action it performs
+  , cmdDesc :: Text    -- ^ Description of command
+  , cmdComp :: CompletionScheme -- ^ How to complete arguments of the command
+  }
+
+-- | Scale (linear or logarithmic) to use with some utilities.
 
 data Scale = Lin | Log deriving (Eq, Show)
 
-data CompletionScheme = None | Files | Names deriving (Eq, Show)
+-- | How to complete arguments of command.
+
+data CompletionScheme
+  = None               -- ^ Don't complete at all
+  | Files              -- ^ Complete as file names
+  | Names              -- ^ Complete as definition names
+    deriving (Eq, Show)
+
+-- | All defined commands.
 
 commands :: [Cmd]
 commands =
+  --    name      action     description                             completion
   [ Cmd "backend" cmdBackend "Set backend (name of DAW)"             None
   , Cmd "cd"      cmdCd      "Change working directory"              Files
   , Cmd "clear"   cmdClear   "Restore default state of environment"  None
@@ -92,180 +104,295 @@ commands =
   , Cmd "udef"    cmdUdef    "Remove definition of given symbol"     Names
   , Cmd "vol"     cmdVol     "Convert decibels to ratio"             None ]
 
-processCmd :: T.Text -> AlgaIO ()
+-- | Process command (with its arguments).
+
+processCmd :: Text -> Alga ()
 processCmd txt =
   case find g commands of
-    Just Cmd { cmdFunc = f } -> f . T.unpack . T.strip $ args
+    Just Cmd { cmdFunc = f } -> do
+      result <- try . f . T.unpack . T.strip $ args
+                :: Alga (Either SomeException ())
+      case result of
+        Left  e ->
+          case fromException e :: Maybe ExitCode of
+            Just  _ -> throwM e
+            Nothing -> spitExc e
+        Right _ -> return ()
     Nothing -> liftIO $
-               fprint ("Unknown command, try " % string % "help.\n") cmdPrefix
+      fprint ("Unknown command, try " % string % "help.\n") cmdPrefix
   where g Cmd { cmdName = c } = c == dropCmdPrefix (T.unpack cmd)
         (cmd, args)           = T.break isSpace (T.strip txt)
 
-completionFunc :: L.CompletionFunc AlgaIO
+-- | Completion function to work with Haskeline.
+
+completionFunc
+  :: (HasEnv m, MonadIO m, MonadReader AlgaCfg m, MonadState AlgaSt m)
+  => L.CompletionFunc m
 completionFunc = L.completeWordWithPrev Nothing " " getCompletions
 
-getCompletions :: String -> String -> AlgaIO [L.Completion]
+-- | Generate completions.
+
+getCompletions
+  :: (HasEnv m, MonadIO m, MonadReader AlgaCfg m, MonadState AlgaSt m)
+  => String            -- ^ Contents of line before cursor, reversed
+  -> String            -- ^ Contents of line after cursor
+  -> m [L.Completion]  -- ^ List of completions
 getCompletions prev word = do
-  names <- liftEnv getRefs
+  names <- getRefs
   files <- L.listFiles word
   let cmds    = (cmdPrefix ++) . cmdName <$> commands
+      f       = fmap L.simpleCompletion . filter (word `isPrefixOf`)
       g None  = []
       g Files = files
       g Names = f names
-  return $ case words . reverse $ prev of
-             []    -> f $ cmds ++ names
-             (c:_) -> case c `elemIndex` cmds of
-                        Just i  -> g . cmdComp $ commands !! i
-                        Nothing -> f names
-    where f = fmap L.simpleCompletion . filter (word `isPrefixOf`)
+  return $
+    case words . reverse $ prev of
+      []    -> f $ cmds ++ names
+      (c:_) ->
+        case c `elemIndex` cmds of
+          Just i  -> g . cmdComp $ commands !! i
+          Nothing -> f names
 
-cmdBackend :: String -> AlgaIO ()
-cmdBackend = setBackend . toBackend
+-- | Change set backend (name of DAW).
 
-cmdCd :: String -> AlgaIO ()
-cmdCd path = liftIO $ do
-  new     <- addTrailingPathSeparator . (</> path) <$> getCurrentDirectory
-  present <- doesDirectoryExist new
+cmdBackend :: MonadState AlgaSt m => String -> m ()
+cmdBackend arg = modify $ \st -> st { stBackend = toBackend arg }
+
+-- | Change working directory.
+
+cmdCd :: MonadIO m => String -> m ()
+cmdCd next' = liftIO $ do
+  next    <- fixPath next' >>= parseAbsDir
+  let npath = fromAbsDir next
+  present <- doesDirectoryExist npath
   if present
-  then do corrected <- canonicalizePath new
-          setCurrentDirectory corrected
-          fprint ("Changed to \"" % string % "\".\n") corrected
-  else fprint ("Cannot cd to \"" % string % "\".\n") new
+  then do setCurrentDirectory npath
+          fprint ("Changed to \"" % string % "\".\n") npath
+  else fprint ("Cannot cd to \"" % string % "\".\n") npath
 
-cmdClear :: String -> AlgaIO ()
-cmdClear _ = liftEnv clearDefs >> liftIO (T.putStrLn "Environment cleared.")
+-- | Restore default state of environment.
 
-cmdDef :: String -> AlgaIO ()
+cmdClear :: (HasEnv m, MonadIO m) => String -> m ()
+cmdClear _ = do
+  clearDefs
+  liftIO (T.putStrLn "Environment cleared.")
+
+-- | Print definition of given symbol.
+
+cmdDef :: (HasEnv m, MonadIO m) => String -> m ()
 cmdDef arg = mapM_ f (words arg)
-  where f name = liftEnv (getSrc name) >>= liftIO . T.putStr
+  where f name = getSrc name >>= liftIO . T.putStr
 
-cmdHelp :: String -> AlgaIO ()
-cmdHelp _ = liftIO (T.putStrLn "Available commands:") >> mapM_ f commands
-  where f Cmd { cmdName = c, cmdDesc = d } = liftIO $ fprint fmt cmdPrefix c d
-        fmt = ("  " % string % (right 24 ' ' %. string) % text % "\n")
+-- | Show help with list of all available commands.
 
-cmdLin :: String -> AlgaIO ()
+cmdHelp :: MonadIO m => String -> m ()
+cmdHelp _ = liftIO $ do
+  T.putStrLn "Available commands:"
+  mapM_ f commands
+  where f Cmd {..} = fprint fmt cmdPrefix cmdName cmdDesc
+        fmt = "  " % string % (right 24 ' ' %. string) % text % "\n"
+
+-- | Linear scale conversion to ratio.
+
+cmdLin :: (MonadIO m, MonadReader AlgaCfg m) => String -> m ()
 cmdLin str = pRatio Lin (parseNum a 0) (parseNum b 1) (parseNum s 0)
   where (a:b:s:_) = parseArgs str
 
-cmdLoad' :: String -> AlgaIO ()
+-- | Load definitions from given file. Note that this version of the command
+-- is used in REPL, not 'cmdLoad'.
+
+cmdLoad' :: (HasEnv m, MonadIO m, MonadState AlgaSt m, MonadThrow m)
+  => String -> m ()
 cmdLoad' = cmdLoad . words
 
-cmdLoad :: [String] -> AlgaIO()
+-- | Alternative interface to loading functionality. This one is used in
+-- main module.
+
+cmdLoad :: (HasEnv m, MonadIO m, MonadState AlgaSt m, MonadThrow m)
+  => [FilePath] -> m ()
 cmdLoad = mapM_ loadOne
 
-loadOne :: String -> AlgaIO ()
+-- | Load single source file.
+
+loadOne :: (HasEnv m, MonadIO m, MonadState AlgaSt m, MonadThrow m)
+  => FilePath -> m ()
 loadOne given = do
   file <- output given ""
-  b    <- liftIO $ doesFileExist file
+  let fpath = fromAbsFile file
+  b    <- liftIO $ doesFileExist fpath
   if b
-  then do contents <- liftIO $ T.readFile file
-          case parseAlga (takeFileName file) contents of
-            Right x -> do mapM_ f x
-                          setFileName file
-                          liftIO $ fprint
-                                 ("\"" % string % "\" loaded successfully.\n")
-                                 file
+  then do contents <- liftIO $ T.readFile fpath
+          case parseAlga fpath contents of
+            Right x -> do
+              mapM_ f x
+              setFileName file
+              liftIO $ fprint
+                ("\"" % string % "\" loaded successfully.\n")
+                fpath
             Left  x -> liftIO $ fprint (string % "\n") x
-  else liftIO $ fprint ("Could not find \"" % string % "\".\n") file
+  else liftIO $ fprint ("Could not find \"" % string % "\".\n") fpath
     where f (Definition n t) = processDef n t
           f (Exposition   _) = return ()
 
-cmdLog :: String -> AlgaIO ()
+-- | Logarithmic scale conversion to ratio.
+
+cmdLog :: (MonadIO m, MonadReader AlgaCfg m) => String -> m ()
 cmdLog str = pRatio Log (parseNum a 0) (parseNum b e) (parseNum s 0)
   where (a:b:s:_) = parseArgs str
         e         = exp 1
 
-cmdMake' :: String -> AlgaIO ()
+-- | Version of 'cmdMake' used by REPL.
+
+cmdMake' :: (HasEnv m, MonadIO m, MonadState AlgaSt m, MonadThrow m)
+  => String -> m ()
 cmdMake' str =
   let (s:b:f:_) = parseArgs str
-  in cmdMake (parseNum s dfltSeed)
-             (parseNum b dfltBeats)
+  in cmdMake (parseNum s defaultSeed)
+             (parseNum b defaultBeats)
              f
 
-cmdMake :: Int -> Double -> String -> AlgaIO ()
+-- | Patch an XML file.
+
+cmdMake :: (HasEnv m, MonadIO m, MonadState AlgaSt m, MonadThrow m)
+  => Natural           -- ^ Seed for random number generator
+  -> Double            -- ^ Desired duration in number of whole notes
+  -> FilePath          -- ^ Where to find file to patch
+  -> m ()
 cmdMake s b f = do
   file    <- output f "xml"
-  backend <- getBackend
-  status  <- liftEnv $ patchAuto s b file backend
+  backend <- gets stBackend
+  status  <- patchAuto s b file backend
   let msg = if status == 0
-            then "File patched successfully \"" % string % "\".\n"
-            else "Failed to patch file \"" % string % "\".\n"
-  liftIO $ fprint msg file
+       then "File patched successfully \"" % string % "\".\n"
+       else "Failed to patch file \"" % string % "\".\n"
+  liftIO $ fprint msg (fromAbsFile file)
 
-cmdLength :: String -> AlgaIO ()
-cmdLength x = getPrevLen >>= setPrevLen . parseNum x
+-- | Set length of displayed results.
 
-cmdPurge :: String -> AlgaIO ()
+cmdLength :: MonadState AlgaSt m => String -> m ()
+cmdLength arg = do
+  len <- gets stPrevLen
+  modify $ \st -> st { stPrevLen = parseNum (trim arg) len }
+
+-- | Remove redundant definitions.
+
+cmdPurge :: (HasEnv m, MonadIO m) => String -> m ()
 cmdPurge _ = do
-  defs <- liftEnv topDefs
-  liftEnv $ purgeEnv defs
+  topDefs >>= purgeEnv
   liftIO $ T.putStrLn "Environment purged."
 
-cmdPwd :: String -> AlgaIO ()
+-- | Print working directory.
+
+cmdPwd :: MonadIO m => String -> m ()
 cmdPwd _ = liftIO (getCurrentDirectory >>= putStrLn)
 
-cmdQuit :: String -> AlgaIO ()
+-- | Quit the interactive environment.
+
+cmdQuit :: MonadIO m => String -> m ()
 cmdQuit _ = liftIO exitSuccess
 
-cmdRatio :: String -> AlgaIO ()
+-- | Real number to ratio converter.
+
+cmdRatio :: (MonadIO m, MonadReader AlgaCfg m) => String -> m ()
 cmdRatio = pRatio Lin 0 1 . (`parseNum` 0)
 
-cmdSave :: String -> AlgaIO ()
+-- | Save current environment in file.
+
+cmdSave :: (HasEnv m, MonadIO m, MonadState AlgaSt m, MonadThrow m)
+  => String -> m ()
 cmdSave given = do
   file   <- output given ""
-  src    <- liftEnv fullSrc
-  result <- liftIO (try (T.writeFile file src) :: IO (Either SomeException ()))
-  let fmt = "Environment saved as \"" % string % "\".\n"
-  case result of
-    Right _ -> do setFileName file
-                  liftIO $ fprint fmt file
-    Left  e -> spitExc e
+  let fpath = fromAbsFile file
+  src    <- fullSrc
+  liftIO $ T.writeFile fpath src
+  setFileName file
+  liftIO $ fprint ("Environment saved as \"" % string % "\".\n") fpath
 
-cmdUdef :: String -> AlgaIO ()
+-- | Undefine definitions.
+
+cmdUdef :: (HasEnv m, MonadIO m) => String -> m ()
 cmdUdef arg = mapM_ f (words arg)
-  where f name = do liftEnv $ remDef name
-                    liftIO $ fprint fmt name
-        fmt = "Definition for «" % string % "» removed.\n"
+  where f name = do
+          remDef name
+          liftIO $ fprint ("Definition for «" % string % "» removed.\n") name
 
-cmdVol :: String -> AlgaIO ()
+-- | Convert decibels to ratio.
+
+cmdVol :: (MonadIO m, MonadReader AlgaCfg m) => String -> m ()
 cmdVol = pRatio Lin 0 1 . dBToRatio . (`parseNum` 0)
   where dBToRatio dB = 10 ** (dB / 10)
 
-pRatio :: Scale -> Double -> Double -> Double -> AlgaIO ()
+-- | Universal conversion to ratios.
+
+pRatio :: (MonadIO m, MonadReader AlgaCfg m)
+  => Scale             -- ^ Scale to use (linear or logarithmic)
+  -> Double            -- ^ Minimum
+  -> Double            -- ^ Maximum
+  -> Double            -- ^ Value between minimum and maximum
+  -> m ()
 pRatio scale a b s = do
-  ε <- getPrecision
+  ε <- asks cfgPrecision
   let σ = case scale of
             Lin -> (s - a) / (b - a)
             Log -> (log s - log a) / (log b - log a)
       x = approxRational σ ε
-  liftIO $ fprint ("≈ " % string % "\n") (pRational x)
+  liftIO $ fprint ("≈ " % string % "\n") (showRatio x)
 
 parseArgs :: String -> [String]
 parseArgs str = words str ++ repeat ""
 
-parseNum :: (Num a, Read a) => String -> a -> a
+-- | Parse a number defaulting to given value.
+
+parseNum :: (Num a, Read a)
+  => String            -- ^ String to parse
+  -> a                 -- ^ Default value
+  -> a                 -- ^ Result
 parseNum s x = fromMaybe x $ fst <$> listToMaybe (reads s)
 
-output :: String -> String -> AlgaIO String
-output given ext = do
-  actual <- getSrcFile
-  home   <- liftIO getHomeDirectory
-  let a = if null ext then actual else replaceExtension actual ext
-      g = joinPath . fmap f . splitDirectories $ given
-      f x = if x == "~" then home else x
-  return $ if null given then a else g
+-- | Generate file name from given base name and extension.
 
-setFileName :: FilePath -> AlgaIO ()
-setFileName path = (</> path) <$> liftIO getCurrentDirectory >>= setSrcFile
+output :: (MonadIO m, MonadThrow m, MonadState AlgaSt m)
+  => FilePath          -- ^ Given file name
+  -> String            -- ^ Extension
+  -> m (Path Abs File) -- ^ Absolute path to output file
+output given' ext = do
+  given  <- liftIO (fixPath given')
+  actual <- fromAbsFile <$> gets stSrcFile
+  let a = if null ext then actual else FP.replaceExtension actual ext
+  parseAbsFile (if null given' then a else given)
+
+-- | Make path absolute resolving tilde (that's actually shell-functionality,
+-- but we do it for convenience).
+
+fixPath :: FilePath -> IO FilePath
+fixPath path = do
+  home <- getHomeDirectory
+  let f x = if x == "~" then home else x
+  makeAbsolute . FP.joinPath . fmap f . FP.splitDirectories $ path
+
+-- | Change current file name.
+
+setFileName :: MonadState AlgaSt m => Path Abs File -> m ()
+setFileName fpath = modify $ \st -> st { stSrcFile = fpath }
+
+-- | Drop command prefix if it's present.
 
 dropCmdPrefix :: String -> String
 dropCmdPrefix arg
   | cmdPrefix `isPrefixOf` arg = drop (length cmdPrefix) arg
   | otherwise = arg
 
+-- | All REPL commands are prefixed with this.
+
 cmdPrefix :: String
 cmdPrefix = ":"
 
-spitExc :: SomeException -> AlgaIO ()
+-- | Print out an exception.
+
+spitExc :: MonadIO m => SomeException -> m ()
 spitExc = liftIO . fprint ("× " % string % ".\n") . show
+
+-- | Stupid trimming for strings.
+
+trim :: String -> String
+trim = let f = reverse . dropWhile isSpace in f . f

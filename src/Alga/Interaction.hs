@@ -19,51 +19,61 @@
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
 module Alga.Interaction
-  ( AlgaIO
-  , AlgaInt
-  , runAlgaInt
-  , AlgaSt (..)
+  ( AlgaSt  (..)
   , AlgaCfg (..)
+  , Alga
+  , runAlga
   , cmdBackend
   , cmdLoad
   , cmdMake
   , interaction
-  , dfltSeed
-  , dfltBeats )
+  , defaultSeed
+  , defaultBeats )
 where
-
-import Control.Monad.Reader
-import System.IO
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.IO as T
-
-import Formatting
-import qualified System.Console.Haskeline as L
 
 import Alga.Interaction.Base
 import Alga.Interaction.Commands
 import Alga.Language
 import Alga.Representation
+import Control.Monad.Reader
+import Control.Monad.State.Strict
+import Data.Text.Lazy (Text)
+import Data.Version (showVersion)
+import Formatting
+import Path
+import Paths_alga (version)
+import System.IO
+import qualified Data.Text.Lazy as T
+import qualified Data.Text.Lazy.IO as T
+import qualified System.Console.Haskeline as L
 
-interaction :: String -> AlgaIO ()
-interaction version = do
+-- | Entry point for REPL interaction.
+
+interaction :: Alga ()
+interaction = do
   liftIO $ hSetBuffering stdin LineBuffering
-  liftIO $ fprint ("ALGA Interactive Environment " % string % "\n") version
+  liftIO $ fprint
+    ("ALGA Interactive Environment " % string % "\n") (showVersion version)
   L.runInputT (L.setComplete completionFunc L.defaultSettings) algaRepl
 
-algaRepl :: L.InputT AlgaIO ()
+-- | Infinite REPL loop inside Haskeline's 'InputT' monad transformer.
+
+algaRepl :: L.InputT Alga ()
 algaRepl = do
   input <- getMultiline ""
   case input of
-    Just x  -> do if T.pack cmdPrefix `T.isPrefixOf` T.strip x
-                  then lift $ processCmd x
-                  else lift $ processExpr x
-                  algaRepl
+    Just x  -> do
+      if T.pack cmdPrefix `T.isPrefixOf` T.strip x
+      then lift $ processCmd x
+      else lift $ processExpr x
+      algaRepl
     Nothing -> return ()
 
-getMultiline :: T.Text -> L.InputT AlgaIO (Maybe T.Text)
+-- | Read multi-line.
+
+getMultiline :: Text -> L.InputT Alga (Maybe Text)
 getMultiline prv = do
-  prompt <- lift getPrompt
+  prompt <- lift (asks cfgPrompt)
   input  <- L.getInputLine $
             if T.null prv then prompt else replicate (length prompt) ' '
   case input of
@@ -73,23 +83,27 @@ getMultiline prv = do
                  else getMultiline r
     Nothing -> return Nothing
 
-processExpr :: T.Text -> AlgaIO ()
+-- | Process expression.
+
+processExpr :: Text -> Alga ()
 processExpr expr = do
-  file <- getSrcFile
-  case parseAlga file expr of
+  file <- gets stSrcFile
+  case parseAlga (fromAbsFile file) expr of
     Right x -> mapM_ f x
     Left  x -> liftIO $ fprint (string % "\n") x
     where f (Definition n t) = processDef n t
-          f (Exposition   t) =
-              do len     <- getPrevLen
-                 verbose <- getVerbose
-                 result  <- liftEnv $ eval t
-                 prin    <- liftEnv $ toPrin t
-                 liftIO $ when verbose $
-                            fprint ("≡ " % text) (showPrinciple prin)
-                 spitList $ take len result
+          f (Exposition   t) = do
+            len     <- gets stPrevLen
+            verbose <- asks cfgVerbose
+            result  <- eval t
+            prin    <- toPrin t
+            liftIO . when verbose $
+              fprint ("≡ " % text) (showPrinciple prin)
+            spitList $ take (fromIntegral len) result
 
-spitList :: [Rational] -> AlgaIO ()
+-- | Pretty-print stream of non-negative ratios.
+
+spitList :: [NRatio] -> Alga ()
 spitList [] = liftIO $ T.putStrLn "⇒ ⊥"
 spitList xs = liftIO $ fprint ("⇒ " % string % "…\n") l
-  where l = unwords $ pRational <$> xs
+  where l = unwords $ showRatio <$> xs
