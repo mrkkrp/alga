@@ -24,44 +24,55 @@ module Alga.Representation.Parser
   , parseAlga )
 where
 
+import Alga.Language.Element (NRatio)
+import Alga.Language.SyntaxTree (SyntaxTree, Sel (..))
 import Control.Applicative
 import Control.Monad (void)
 import Data.Ratio ((%))
-import qualified Data.Text.Lazy as T
-
+import Data.Text.Lazy (Text)
 import Text.Megaparsec
 import Text.Megaparsec.Expr
 import Text.Megaparsec.Text.Lazy
+import qualified Alga.Representation.Base as B
+import qualified Data.Text.Lazy as T
 import qualified Text.Megaparsec.Lexer as L
 
-import Alga.Language.SyntaxTree (SyntaxTree, Sel (..))
-import qualified Alga.Representation.Base as B
+-- | Statement can be either definition or exposition. Expositions are only
+-- used in REPL.
 
 data Statement
   = Definition String SyntaxTree
   | Exposition SyntaxTree
     deriving (Eq, Show)
 
-probeAlga :: T.Text -> Bool
-probeAlga txt = not $ or ["," `T.isSuffixOf` stripped
-                       , f ("[", "]")
-                       , f ("{", "}")
-                       , f ("<", ">")
-                       , f ("(", ")") ]
+-- | Test if given fragment of ALGA code is finished and self-contained.
+
+probeAlga :: Text -> Bool
+probeAlga txt = not $ or
+  ["," `T.isSuffixOf` stripped
+  , f ("[", "]")
+  , f ("{", "}")
+  , f ("<", ">")
+  , f ("(", ")") ]
   where stripped = T.strip txt
         f (x, y) = (&&) <$> (> 0) <*> (/= g y) $ g x
         g x      = T.count x stripped
 
-parseAlga :: String -> T.Text -> Either String [Statement]
+-- | Entry point for ALGA parsing.
+
+parseAlga
+  :: String            -- ^ Name of file
+  -> Text              -- ^ Text to parse
+  -> Either String [Statement] -- ^ Error message or parsed statements
 parseAlga file txt =
   case parse parser file txt of
     Right x -> if null x
-               then Left $ '\"' : file ++ "\":\ninvalid definition syntax"
-               else Right x
+      then Left $ '\"' : file ++ "\":\ninvalid definition syntax"
+      else Right x
     Left  x -> Left . show $ x
   where parser = if T.pack B.defOp `T.isInfixOf` txt
-                 then pSource
-                 else return <$> pExposition
+          then pSource
+          else return <$> pExposition
 
 pSource :: Parser [Statement]
 pSource = sc *> many pDefinition <* eof
@@ -84,13 +95,14 @@ pPrinciple :: Parser SyntaxTree
 pPrinciple = sepBy (pExpression <|> pElement) (optional comma)
 
 pElement :: Parser Sel
-pElement =  try pRange
-        <|> pValue
-        <|> try pReference
-        <|> pSection
-        <|> try pMulti
-        <|> pCMulti
-        <?> "element"
+pElement
+  =  try pRange
+  <|> pValue
+  <|> try pReference
+  <|> pSection
+  <|> try pMulti
+  <|> pCMulti
+  <?> "element"
 
 pRange :: Parser Sel
 pRange = Range <$> pLiteral <* pOperator B.rangeOp <*> pLiteral
@@ -98,7 +110,7 @@ pRange = Range <$> pLiteral <* pOperator B.rangeOp <*> pLiteral
 pValue :: Parser Sel
 pValue = Value <$> pLiteral
 
-pLiteral :: Parser Rational
+pLiteral :: Parser NRatio
 pLiteral = rational <?> "literal value"
 
 pReference :: Parser Sel
@@ -136,10 +148,10 @@ brackets :: Parser a -> Parser a
 brackets = between (symbol "[") (symbol "]")
 
 comma :: Parser ()
-comma = void $ symbol ","
+comma = void . hidden . symbol $ ","
 
-rational :: Parser Rational
-rational = (% 1) <$> lexeme L.integer
+rational :: Parser NRatio
+rational = (% 1) . fromIntegral <$> lexeme L.integer
 
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")

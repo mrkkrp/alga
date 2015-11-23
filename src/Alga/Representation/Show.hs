@@ -25,34 +25,54 @@ module Alga.Representation.Show
   , showPrinciple )
 where
 
+import Alga.Language.Element
+import Alga.Language.SyntaxTree
+import Alga.Representation.Parser (Statement (..))
 import Control.Arrow ((***), (>>>))
 import Data.List (intersperse)
 import Data.Monoid ((<>))
 import Data.Ratio (numerator, denominator)
-import qualified Data.Text.Lazy as T
+import Data.Text.Lazy (Text)
+import qualified Alga.Representation.Base as B
 import qualified Data.Text.Lazy.Builder as T (Builder, fromString, toLazyText)
 import qualified Data.Text.Lazy.Builder.Int as T (decimal)
 
-import Alga.Language.Element
-import Alga.Language.SyntaxTree
-import Alga.Representation.Parser (Statement (..))
-import qualified Alga.Representation.Base as B
+-- | Render a statement. This handles definitions and expositions.
 
-showStatement :: Statement -> T.Text
+showStatement :: Statement -> Text
 showStatement (Definition n t) = showDefinition n t
 showStatement (Exposition   t) = showSyntaxTree t
 
-showDefinition :: String -> SyntaxTree -> T.Text
+-- | Render definition.
+
+showDefinition
+  :: String            -- ^ Reference name
+  -> SyntaxTree        -- ^ Syntax tree
+  -> Text              -- ^ Textual representation of definition
 showDefinition n = T.toLazyText . showDefinition' n
 
-showSyntaxTree :: SyntaxTree -> T.Text
+-- | Render syntax tree.
+
+showSyntaxTree :: SyntaxTree -> Text
 showSyntaxTree = T.toLazyText . showSyntaxTree'
 
-showPrinciple :: Principle -> T.Text
+-- | Show principle. This is useful for printing of simplified principles
+-- back to user. We can use the same pretty-printing algorithm as for syntax
+-- trees, but this requires us to perform transformation from 'Principle' to
+-- 'SyntaxTree', which is trivial.
+
+showPrinciple :: Principle -> Text
 showPrinciple = showSyntaxTree . toSyntaxTree
 
-showDefinition' :: String -> SyntaxTree -> T.Builder
+-- | This is used by 'showDefinition'. It just creates lazy text builder.
+
+showDefinition'
+  :: String            -- ^ Reference name
+  -> SyntaxTree        -- ^ Syntax tree
+  -> T.Builder         -- ^ Lazy text builder for this definition
 showDefinition' n t = T.fromString n <> pad B.defOp <> showSyntaxTree' t
+
+-- | Convert syntax tree into lazy text builder.
 
 showSyntaxTree' :: SyntaxTree -> T.Builder
 showSyntaxTree' t = cm f t <> "\n"
@@ -82,19 +102,26 @@ showSyntaxTree' t = cm f t <> "\n"
     f (Reverse     x) = T.fromString B.reverseOp <> p x
     c xs              = "<" <> cm f xs <> "> "
 
+-- | Convert principle to syntax tree to show it.
+
 toSyntaxTree :: Principle -> SyntaxTree
-toSyntaxTree = (f <$>)
+toSyntaxTree = fmap f
   where f (Val  x) = Value x
         f (Sec  x) = Section $ f <$> x
         f (Mul  x) = Multi   $ f <$> x
         f (CMul x) = CMulti  $ (toSyntaxTree *** toSyntaxTree) <$> x
 
+-- | Pad given string with single space on both sides.
+
 pad :: String -> T.Builder
 pad op = " " <> T.fromString op <> " "
 
-pRational :: Rational -> T.Builder
-pRational x = if d == 1
-              then T.decimal n
-              else T.decimal n <> T.fromString B.divisionOp <> T.decimal d
-  where n = numerator   x
-        d = denominator x
+-- | Render non-negative ratio.
+
+pRational :: NRatio -> T.Builder
+pRational x =
+  let n = numerator   x
+      d = denominator x
+  in if d == 1
+     then T.decimal n
+     else T.decimal n <> T.fromString B.divisionOp <> T.decimal d
