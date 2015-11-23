@@ -19,58 +19,66 @@
 
 module Main (main) where
 
-import Control.Monad
-import Data.Version (showVersion)
-import Paths_alga (version)
-import System.Directory (getHomeDirectory, doesFileExist, getCurrentDirectory)
-import System.FilePath
-import qualified Data.Map as M
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.IO as T
-
-import Formatting
-import Options.Applicative
-
 import Alga.Configuration
 import Alga.Interaction
 import Alga.Translation (toBackend)
+import Control.Monad
+import Data.Text.Lazy (Text)
+import Data.Version (showVersion)
+import Formatting
+import Numeric.Natural
+import Options.Applicative
+import Path
+import Paths_alga (version)
+import System.Directory (getHomeDirectory, doesFileExist, getCurrentDirectory)
+import qualified Data.Map as M
+import qualified Data.Text.Lazy.IO as T
+
+-- | ALGA application command line options.
 
 data Opts = Opts
-  { opInterac :: Bool
-  , opBackend :: String
-  , opSeed    :: Int
-  , opBeats   :: Double
-  , opTarget  :: String
-  , opLicense :: Bool
-  , opVersion :: Bool
-  , opFiles   :: [String] }
+  { opInterac :: Bool  -- ^ Do we run in interactive mode?
+  , opBackend :: String -- ^ Which backend to use?
+  , opSeed    :: Natural -- ^ Seed for random number generator
+  , opBeats   :: Double -- ^ Duration as number of whole notes
+  , opTarget  :: String -- ^ XML file for patching
+  , opLicense :: Bool  -- ^ Whether to show license
+  , opVersion :: Bool  -- ^ Whether to show program's version
+  , opFiles   :: [FilePath] -- ^ Source files to load
+  }
+
+-- | Entry point for the whole thing.
 
 main :: IO ()
 main = execParser opts >>= f
   where f Opts { opLicense = True } = T.putStr license
         f Opts { opVersion = True } = fprint ("ALGA " % string % "\n") ver
         f Opts { opFiles   = []
-               , opBackend = β    } = g β $ interaction ver
+               , opBackend = β    } = g β interaction
         f Opts { opInterac = True
                , opBackend = β
-               , opFiles   = ns   } = g β $ cmdLoad ns >> interaction ver
+               , opFiles   = ns   } = g β $ cmdLoad ns >> interaction
         f Opts { opBackend = β
                , opSeed    = s
                , opBeats   = b
                , opTarget  = trg
                , opFiles   = ns   } = g β $ cmdLoad ns >> cmdMake s b trg
-        g β x   = T.putStrLn notice >> runAlga (ξ β >> x)
+        g β x   = T.putStrLn notice >> runAlga' (ξ β >> x)
         ξ β = unless (null β) (cmdBackend β)
         ver = showVersion version
 
-notice :: T.Text
+-- | Shortish copyright notice.
+
+notice :: Text
 notice =
   "ALGA Copyright © 2015 Mark Karpov\n\n\
   \This program comes with ABSOLUTELY NO WARRANTY. This is free software,\n\
   \and you are welcome to redistribute it under certain conditions; see\n\
   \GNU General Public License for details.\n"
 
-license :: T.Text
+-- | Longer copyright notice.
+
+license :: Text
 license =
   "ALGA — algorithmic automation for various DAWs.\n\
   \Copyright © 2015 Mark Karpov\n\
@@ -88,22 +96,30 @@ license =
   \You should have received a copy of the GNU General Public License along\n\
   \with this program. If not, see <http://www.gnu.org/licenses/>.\n"
 
-runAlga :: AlgaIO () -> IO ()
-runAlga e = do
+-- | Read configuration file if present and run ALGA monad.
+
+runAlga' :: Alga () -> IO ()
+runAlga' e = do
   params <- loadConfig
-  wdir   <- getCurrentDirectory
-  void $ runAlgaInt e
+  wdir   <- getCurrentDirectory >>= parseAbsDir
+  dfname <- parseRelFile "foo.da"
+  let dfltSrcFile = fromAbsFile (wdir </> dfname)
+  srcFile <- parseAbsFile (lookupCfg params "src" dfltSrcFile)
+  void $ runAlga e
     AlgaSt { stBackend = toBackend $ lookupCfg params "backend" "default"
            , stPrevLen = lookupCfg params "prvlen" 18
-           , stSrcFile = lookupCfg params "src"    wdir </> "foo.ga" }
+           , stSrcFile = srcFile }
     AlgaCfg { cfgPrecision = lookupCfg params "precision" 0.01
             , cfgPrompt    = lookupCfg params "prompt"    "> "
             , cfgVerbose   = lookupCfg params "verbose"   True }
 
+-- | Read configuration file.
+
 loadConfig :: IO Params
 loadConfig = do
-  home <- getHomeDirectory
-  let file = home </> ".alga"
+  home <- getHomeDirectory >>= parseAbsDir
+  cfn  <- parseRelFile ".alga"
+  let file = fromAbsFile (home </> cfn)
   exist <- doesFileExist file
   if exist
   then do params <- parseConfig file <$> T.readFile file
@@ -112,11 +128,15 @@ loadConfig = do
             Left  _ -> return M.empty
   else return M.empty
 
+-- | Some information about the program.
+
 opts :: ParserInfo Opts
 opts =  info (helper <*> options)
       ( fullDesc
      <> progDesc "starts ALGA interpreter or patches given XML file"
      <> header "alga — algorithmic automation for various DAWs" )
+
+-- | Description of command line options.
 
 options :: Parser Opts
 options = Opts
@@ -134,14 +154,14 @@ options = Opts
   ( long "seed"
   <> short 's'
   <> metavar "SEED"
-  <> value dfltSeed
-  <> help ("Set seed for random numbers, default is " ++ show dfltSeed) )
+  <> value defaultSeed
+  <> help ("Set seed for random numbers, default is " ++ show defaultSeed) )
   <*> option auto
   ( long "beats"
   <> short 'b'
   <> metavar "BEATS"
-  <> value dfltBeats
-  <> help ("Set total time in whole notes, default is " ++ show dfltBeats) )
+  <> value defaultBeats
+  <> help ("Set total time in whole notes, default is " ++ show defaultBeats) )
   <*> strOption
   ( long "target"
   <> short 't'
