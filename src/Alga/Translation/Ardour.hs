@@ -21,5 +21,8 @@ module Alga.Translation.Ardour (ardourBackend) where
 
 import Alga.Translation.Base
 
+-- | Adour backend for XML configuration patching. This function says:
+-- “Please, finish me if you're OK with arrows and you're Ardour user.”
+
 ardourBackend :: AlgaBackend
 ardourBackend = undefined
