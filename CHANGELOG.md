@@ -2,4 +2,5 @@
 
 ## ALGA 0.1.0
 
-Initial release.
+Initial release. Support for Ardour is still not done. Maybe because I don't
+use it.
