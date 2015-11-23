@@ -17,6 +17,9 @@
 -- You should have received a copy of the GNU General Public License along
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+
 module Alga.Configuration
   ( Params
   , parseConfig
@@ -26,15 +29,19 @@ where
 import Control.Applicative
 import Control.Monad
 import Data.Char (isSpace)
+import Data.Map (Map)
 import Data.Maybe (fromMaybe, listToMaybe)
-import qualified Data.Map as M
-import qualified Data.Text.Lazy as T
-
+import Data.Text.Lazy (Text)
+import Numeric.Natural
 import Text.Megaparsec
 import Text.Megaparsec.Text.Lazy
+import qualified Data.Map as M
 import qualified Text.Megaparsec.Lexer as L
 
-type Params = M.Map String String
+-- | Collection of configuration parameters. They are kept as 'String's and
+-- then converted on request.
+
+type Params = Map String String
 
 class Read a => Parsable a where
   parseValue :: String -> Maybe a
@@ -42,7 +49,7 @@ class Read a => Parsable a where
 instance Parsable String where
   parseValue = Just
 
-instance Parsable Int where
+instance Parsable Natural where
   parseValue = parseNum
 
 instance Parsable Double where
@@ -53,13 +60,19 @@ instance Parsable Bool where
   parseValue "false" = Just False
   parseValue _       = Nothing
 
-lookupCfg :: Parsable a => Params -> String -> a -> a
+-- | Lookup a value from configuration parameters. Type of result determines
+-- how value will be interpreted.
+
+lookupCfg :: Parsable a
+  => Params            -- ^ Collection of configuration parameters
+  -> String            -- ^ Name of parameter to lookup
+  -> a                 -- ^ Fallback value
+  -> a                 -- ^ Result
 lookupCfg cfg v d = fromMaybe d $ M.lookup v cfg >>= parseValue
 
-parseNum :: (Num a, Read a) => String -> Maybe a
-parseNum = fmap fst . listToMaybe . reads
+-- | Parse configuration file.
 
-parseConfig :: String -> T.Text -> Either String Params
+parseConfig :: String -> Text -> Either String Params
 parseConfig file = either (Left . show) Right . parse pConfig file
 
 pConfig :: Parser Params
@@ -87,3 +100,6 @@ lexeme = L.lexeme sc
 
 sc :: Parser ()
 sc = L.space (void spaceChar) (L.skipLineComment "#") empty
+
+parseNum :: (Num a, Read a) => String -> Maybe a
+parseNum = fmap fst . listToMaybe . reads
