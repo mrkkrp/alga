@@ -49,7 +49,7 @@ cabal-version:        >= 1.10
 library
   hs-source-dirs:     src
   ghc-options:        -O2 -Wall
-  ghc-prof-options:   -O2 -Wall -prof -fprof-auto -fprof-cafs -rtsopts
+  ghc-prof-options:   -O2 -Wall -prof -fprof-cafs -rtsopts
   build-depends:      base                   >= 4.8 && < 5
                     , containers             >= 0.5.5.1
                     , exceptions             >= 0.8
@@ -87,7 +87,7 @@ executable alga
   hs-source-dirs:     src
   other-modules:      Alga.Interaction
   ghc-options:        -O2 -Wall
-  ghc-prof-options:   -O2 -Wall -prof -fprof-auto -fprof-cafs -rtsopts
+  ghc-prof-options:   -O2 -Wall -prof -fprof-cafs -rtsopts
   build-depends:      alga                   >= 0.1.0
                     , base                   >= 4.8 && < 5
                     , containers             >= 0.5.5.1
