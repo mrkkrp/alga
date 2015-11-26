@@ -80,7 +80,7 @@ newtype AlgaEnv m a = AlgaEnv
            , MonadCatch
            , MonadMask )
 
--- | Type class for things that can be considered MIDA environment.
+-- | Type class for things that can be considered ALGA environment.
 
 class Monad m => HasEnv m where
   -- | Get collection of all definitions.

@@ -29,6 +29,8 @@ import Alga.Translation.Base
 import Alga.Translation.Ardour
 import Alga.Translation.Cubase
 
+-- | Transform name of DAW into ALGA backend.
+
 toBackend :: String -> AlgaBackend
 toBackend "ardour" = ardourBackend
 toBackend _        = cubaseBackend
