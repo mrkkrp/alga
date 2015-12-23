@@ -46,9 +46,17 @@ build-type:           Simple
 extra-source-files:   README.md, CHANGELOG.md
 cabal-version:        >= 1.10
 
+flag dev
+  description:       Turn on development settings.
+  manual:            True
+  default:           False
+
 library
   hs-source-dirs:     src
-  ghc-options:        -O2 -Wall -Werror
+  if flag(dev)
+    ghc-options:      -O2 -Wall -Werror
+  else
+    ghc-options:      -O2 -Wall
   ghc-prof-options:   -O2 -Wall -prof -fprof-cafs -rtsopts
   build-depends:      base                   >= 4.8 && < 5
                     , containers             >= 0.5.5.1
@@ -86,7 +94,10 @@ executable alga
   main-is:            Main.hs
   hs-source-dirs:     src
   other-modules:      Alga.Interaction
-  ghc-options:        -O2 -Wall -Werror
+  if flag(dev)
+    ghc-options:      -O2 -Wall -Werror
+  else
+    ghc-options:      -O2 -Wall
   ghc-prof-options:   -O2 -Wall -prof -fprof-cafs -rtsopts
   build-depends:      alga                   >= 0.1.0
                     , base                   >= 4.8 && < 5
@@ -134,7 +145,10 @@ test-suite tests
   main-is:            Main.hs
   hs-source-dirs:     tests
   type:               exitcode-stdio-1.0
-  ghc-options:        -O2 -Wall -Werror
+  if flag(dev)
+    ghc-options:      -O2 -Wall -Werror
+  else
+    ghc-options:      -O2 -Wall
   default-language:   Haskell2010
   build-depends:      QuickCheck                 >= 2.4 && < 3
                     , alga                       >= 0.1.0
