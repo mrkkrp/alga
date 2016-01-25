@@ -1,4 +1,3 @@
--- -*- Mode: Haskell; -*-
 --
 -- This module describes all supported ALGA commands. It also provides all
 -- the functionality to load source files and patch XML files.

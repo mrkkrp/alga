@@ -1,4 +1,3 @@
--- -*- Mode: Haskell; -*-
 --
 -- This is entry point of Alga.Lang library.
 --

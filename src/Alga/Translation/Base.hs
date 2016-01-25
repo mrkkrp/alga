@@ -1,4 +1,3 @@
--- -*- Mode: Haskell; -*-
 --
 -- In this module we describe how to prepare information about automation
 -- tracks and then use specific (to DAW) arrow to patch XML file.

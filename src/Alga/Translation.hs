@@ -1,4 +1,3 @@
--- -*- Mode: Haskell; -*-
 --
 -- This module performs patching of data structure that represent tracks
 -- according of state of ALGA environment.

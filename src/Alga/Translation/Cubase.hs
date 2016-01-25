@@ -1,4 +1,3 @@
--- -*- Mode: Haskell; -*-
 --
 -- Patching of XML files, Cubase backend.
 --
