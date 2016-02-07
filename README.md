@@ -5,7 +5,7 @@
 [![Build Status](https://travis-ci.org/mrkkrp/alga.svg?branch=master)](https://travis-ci.org/mrkkrp/alga)
 
 How to algorithmically control every aspect of music using familiar, robust
-tools: plugins, DAWs, etc. that have not built with this in mind? I've
+tools: plugins, DAWs, etc. that have not been built with this in mind? I've
 partially solved the problem in [MIDA](https://github.com/mrkkrp/mida) —
 program that generates MIDI files using simple, symmetric, declarative
 language. However, even though MIDA is a fine tool to create scores, it's

@@ -22,10 +22,10 @@ synopsis:             Algorithmic automation for various DAWs
 description:
 
   How to algorithmically control every aspect of music using familiar,
-  robust tools: plugins, DAWs, etc. that have not built with this in mind?
-  I've partially solved the problem in MIDA -- program that generates MIDI
-  files using very simple and symmetric language. However, even though MIDA
-  is a fine tool to create scores, it's not sufficient if you want to
+  robust tools: plugins, DAWs, etc. that have not been built with this in
+  mind?  I've partially solved the problem in MIDA — program that generates
+  MIDI files using very simple and symmetric language. However, even though
+  MIDA is a fine tool to create scores, it's not sufficient if you want to
   control everything. Initially I thought I could find some plugins that can
   algorithmically control other plugins, but there are no decent tools of
   this sort. How automation is handled in a traditional DAW? Well, you draw
