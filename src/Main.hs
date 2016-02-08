@@ -16,6 +16,8 @@
 -- You should have received a copy of the GNU General Public License along
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
+{-# LANGUAGE TemplateHaskell #-}
+
 module Main (main) where
 
 import Alga.Configuration
@@ -28,8 +30,8 @@ import Formatting
 import Numeric.Natural
 import Options.Applicative
 import Path
+import Path.IO
 import Paths_alga (version)
-import System.Directory (getHomeDirectory, doesFileExist, getCurrentDirectory)
 import qualified Data.Map as M
 import qualified Data.Text.Lazy.IO as T
 
@@ -100,7 +102,7 @@ license =
 runAlga' :: Alga () -> IO ()
 runAlga' e = do
   params <- loadConfig
-  wdir   <- getCurrentDirectory >>= parseAbsDir
+  wdir   <- getCurrentDir
   dfname <- parseRelFile "foo.da"
   let dfltSrcFile = fromAbsFile (wdir </> dfname)
   srcFile <- parseAbsFile (lookupCfg params "src" dfltSrcFile)
@@ -116,16 +118,16 @@ runAlga' e = do
 
 loadConfig :: IO Params
 loadConfig = do
-  home <- getHomeDirectory >>= parseAbsDir
-  cfn  <- parseRelFile ".alga"
-  let file = fromAbsFile (home </> cfn)
-  exist <- doesFileExist file
-  if exist
-  then do params <- parseConfig file <$> T.readFile file
-          case params of
-            Right x -> return x
-            Left  _ -> return M.empty
-  else return M.empty
+  config <- (</> $(mkRelFile ".mida")) <$> getHomeDir
+  exists <- doesFileExist config
+  if exists
+    then do
+      let fconfig = fromAbsFile config
+      params <- parseConfig fconfig <$> T.readFile fconfig
+      case params of
+        Right x -> return x
+        Left  _ -> return M.empty
+    else return M.empty
 
 -- | Some information about the program.
 
