@@ -2,7 +2,7 @@
 -- In this module we describe how to prepare information about automation
 -- tracks and then use specific (to DAW) arrow to patch XML file.
 --
--- Copyright © 2015 Mark Karpov
+-- Copyright © 2015–2016 Mark Karpov
 --
 -- ALGA is free software: you can redistribute it and/or modify it under the
 -- terms of the GNU General Public License as published by the Free Software
@@ -104,7 +104,7 @@ topDefs = filter isTopRef <$> getRefs
 patchAuto :: (MonadIO m, HasEnv m)
   => Natural           -- ^ Seed for random number generator
   -> Double            -- ^ Duration as number of whole notes
-  -> Path Abs File     -- ^ Path to file to path
+  -> Path Abs File     -- ^ Path to file to patch
   -> AlgaBackend       -- ^ Backed (arrow that will patch XML)
   -> m Int             -- ^ Exit code
 patchAuto s b fpath exec = do
@@ -112,7 +112,8 @@ patchAuto s b fpath exec = do
   refs <- getRefs
   amap <- M.fromListWith M.union . concat <$>
     mapM (fmap maybeToList . toMap b) refs
-  let file = fromAbsFile fpath
+  let file = "file://localhost" ++ (g <$> fromAbsFile fpath)
+      g x  = if x == '\\' then '/' else x
   head <$> (liftIO . runX $
     readDocument [withValidate no] file >>>
     exec amap                           >>>
