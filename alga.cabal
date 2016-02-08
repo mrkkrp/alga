@@ -46,9 +46,9 @@ extra-source-files:   README.md, CHANGELOG.md
 cabal-version:        >= 1.10
 
 flag dev
-  description:       Turn on development settings.
-  manual:            True
-  default:           False
+  description:        Turn on development settings.
+  manual:             True
+  default:            False
 
 library
   hs-source-dirs:     src
@@ -164,5 +164,5 @@ test-suite tests
                     , transformers               >= 0.2.0.0
 
 source-repository head
-  type:              git
-  location:          git://github.com/mrkkrp/alga.git
+  type:               git
+  location:           git://github.com/mrkkrp/alga.git
