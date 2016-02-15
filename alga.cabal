@@ -73,8 +73,7 @@ library
                     , FlexibleInstances
                     , OverloadedStrings
                     , TupleSections
-  exposed-modules:    Alga.Configuration
-                    , Alga.Language
+  exposed-modules:    Alga.Language
                     , Alga.Language.Element
                     , Alga.Language.Environment
                     , Alga.Language.Eval
@@ -99,8 +98,10 @@ executable alga
     ghc-options:      -O2 -Wall
   ghc-prof-options:   -O2 -Wall -prof -fprof-cafs -rtsopts
   build-depends:      alga                   >= 0.1.0
+                    , aeson                  >= 0.7
                     , base                   >= 4.8 && < 5
                     , containers             >= 0.5.5.1
+                    , data-default           >= 0.5.3
                     , exceptions             >= 0.8
                     , filepath               >= 1.3.0.2
                     , formatting             >= 6.2
@@ -115,9 +116,11 @@ executable alga
                     , text                   >= 1.2.0.4
                     , tf-random              >= 0.5
                     , transformers           >= 0.2.0.0
+                    , yaml                   >= 0.8.15.1
   default-extensions: FlexibleContexts
                     , FlexibleInstances
                     , OverloadedStrings
+                    , RecordWildCards
                     , TupleSections
   other-modules:      Alga.Configuration
                     , Alga.Interaction

@@ -16,23 +16,20 @@
 -- You should have received a copy of the GNU General Public License along
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
-{-# LANGUAGE TemplateHaskell #-}
-
 module Main (main) where
 
 import Alga.Configuration
 import Alga.Interaction
 import Alga.Translation (toBackend)
 import Control.Monad
+import Control.Monad.IO.Class
 import Data.Text.Lazy (Text)
 import Data.Version (showVersion)
 import Formatting
 import Numeric.Natural
 import Options.Applicative
-import Path
 import Path.IO
 import Paths_alga (version)
-import qualified Data.Map as M
 import qualified Data.Text.Lazy.IO as T
 
 -- | ALGA application command line options.
@@ -99,35 +96,24 @@ license =
 
 -- | Read configuration file if present and run ALGA monad.
 
-runAlga' :: Alga () -> IO ()
+runAlga' :: Alga a -> IO ()
 runAlga' e = do
-  params <- loadConfig
-  wdir   <- getCurrentDir
-  dfname <- parseRelFile "foo.da"
-  let dfltSrcFile = fromAbsFile (wdir </> dfname)
-  srcFile <- parseAbsFile (lookupCfg params "src" dfltSrcFile)
+  mconfig <- forgivingAbsence (resolveFile' ".alga.yaml")
+  c <- case mconfig of
+    Nothing -> return def
+    Just file -> do
+      econfig <- parseAlgaConfig file
+      case econfig of
+        Left msg -> liftIO (putStrLn msg) >> return def
+        Right val -> return val
+  srcFile <- makeAbsolute (configSrcFile c)
   void $ runAlga e
-    AlgaSt { stBackend = toBackend $ lookupCfg params "backend" "default"
-           , stPrevLen = lookupCfg params "prvlen" 18
+    AlgaSt { stBackend = toBackend (configBackend c)
+           , stPrevLen = configPrevLen c
            , stSrcFile = srcFile }
-    AlgaCfg { cfgPrecision = lookupCfg params "precision" 0.01
-            , cfgPrompt    = lookupCfg params "prompt"    "> "
-            , cfgVerbose   = lookupCfg params "verbose"   True }
-
--- | Read configuration file.
-
-loadConfig :: IO Params
-loadConfig = do
-  config <- (</> $(mkRelFile ".mida")) <$> getHomeDir
-  exists <- doesFileExist config
-  if exists
-    then do
-      let fconfig = fromAbsFile config
-      params <- parseConfig fconfig <$> T.readFile fconfig
-      case params of
-        Right x -> return x
-        Left  _ -> return M.empty
-    else return M.empty
+    AlgaCfg { cfgPrecision = configPrecision c
+            , cfgPrompt    = configPrompt c
+            , cfgVerbose   = configVerbose c }
 
 -- | Some information about the program.
 
