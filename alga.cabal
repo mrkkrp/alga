@@ -17,7 +17,7 @@
 -- with this program. If not, see <http://www.gnu.org/licenses/>.
 
 name:                 alga
-version:              0.1.0
+version:              0.1.1
 synopsis:             Algorithmic automation for various DAWs
 description:
 
@@ -97,7 +97,7 @@ executable alga
   else
     ghc-options:      -O2 -Wall
   ghc-prof-options:   -O2 -Wall -prof -fprof-cafs -rtsopts
-  build-depends:      alga                   >= 0.1.0
+  build-depends:      alga                   >= 0.1.1
                     , aeson                  >= 0.7
                     , base                   >= 4.8 && < 5
                     , containers             >= 0.5.5.1
@@ -152,7 +152,7 @@ test-suite tests
     ghc-options:      -O2 -Wall
   default-language:   Haskell2010
   build-depends:      QuickCheck                 >= 2.4 && < 3
-                    , alga                       >= 0.1.0
+                    , alga                       >= 0.1.1
                     , base                       >= 4.8 && < 5
                     , containers                 >= 0.5.5.1
                     , hxt                        >= 9.3.1.15

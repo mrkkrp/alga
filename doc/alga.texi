@@ -2,11 +2,11 @@
 @comment %**start of header (This is for running Texinfo on a region.)
 @setfilename alga.info
 @settitle ALGA Manual
-@set EDITION 0.1.0
-@set VERSION 0.1.0
-@set UPDATED 1 August 2015
-@set UPDATED-MONTH August 2015
-@set LASTCHANGE Sat August 1 22:57:18 EST 2015
+@set EDITION 0.1.1
+@set VERSION 0.1.1
+@set UPDATED 16 February 2016
+@set UPDATED-MONTH February 2016
+@set LASTCHANGE Mon February 16 22:57:18 EST 2016
 
 @comment %**end of header (This is for running Texinfo on a region.)
 @synindex vr fn
@@ -15,7 +15,7 @@
 This manual describes ALGA language and its realization (version
 @value{VERSION}, @value{UPDATED}).
 
-Copyright @copyright{} 2015 Mark Karpov
+Copyright @copyright{} 2015–2016 Mark Karpov
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -457,7 +457,7 @@ This program comes with ABSOLUTELY NO WARRANTY. This is free software,
 and you are welcome to redistribute it under certain conditions; see
 GNU General Public License for details.
 
-ALGA Interactive Environment 0.1.0
+ALGA Interactive Environment 0.1.1
 >
 @end example
 
