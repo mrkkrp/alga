@@ -26,31 +26,29 @@ automation tracks in place.
 
 ## Installation
 
-1. Install [Haskell Platform](https://www.haskell.org/platform/);
-2. Install [Cabal](https://www.haskell.org/cabal/);
-3. Download and untar git repository of MIDA, or clone it:
+1. Install the [Haskell Tool Stack](http://haskellstack.org).
+
+2. Add `~/.local/bin` directory to your `PATH`, like this:
+
+   ```
+   # in .bashrc or similar
+   export PATH=$HOME/.local/bin:$PATH
+   ```
+
+3. Clone the repo, `cd` into it, and let `stack` do its thing:
 
    ```
    $ git clone https://github.com/mrkkrp/alga.git
+   $ cd mida
+   $ stack build --copy-bins
    ```
 
-4. Go to the root directory of the repository and execute:
+4. Check it out:
 
    ```
-   $ cabal update
-   $ cabal configure
-   $ cabal install --only-dependencies
-   $ cabal build
-   # sh install.sh
+   $ alga --version
+   ALGA 0.1.1
    ```
-
-   or (if you use Stack):
-
-   ```
-   $ stack build
-   ```
-
-5. Done (you can use `uninstall.sh` to uninstall the program).
 
 ## Example
 
