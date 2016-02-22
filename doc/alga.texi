@@ -2,11 +2,11 @@
 @comment %**start of header (This is for running Texinfo on a region.)
 @setfilename alga.info
 @settitle ALGA Manual
-@set EDITION 0.1.1
-@set VERSION 0.1.1
-@set UPDATED 16 February 2016
+@set EDITION 0.2.0
+@set VERSION 0.2.0
+@set UPDATED 22 February 2016
 @set UPDATED-MONTH February 2016
-@set LASTCHANGE Mon February 16 22:57:18 EST 2016
+@set LASTCHANGE Mon February 22 22:57:18 EST 2016
 
 @comment %**end of header (This is for running Texinfo on a region.)
 @synindex vr fn
@@ -114,7 +114,7 @@ $ stack build --copy-bins
 Check it out:
 @example
 $ alga --version
-ALGA 0.1.1
+ALGA 0.2.0
 @end example
 @end enumerate
 
@@ -448,7 +448,7 @@ This program comes with ABSOLUTELY NO WARRANTY. This is free software,
 and you are welcome to redistribute it under certain conditions; see
 GNU General Public License for details.
 
-ALGA Interactive Environment 0.1.1
+ALGA Interactive Environment 0.2.0
 >
 @end example
 

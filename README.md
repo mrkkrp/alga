@@ -47,7 +47,7 @@ automation tracks in place.
 
    ```
    $ alga --version
-   ALGA 0.1.1
+   ALGA 0.2.0
    ```
 
 ## Example
