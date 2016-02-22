@@ -112,10 +112,12 @@ patchAuto s b fpath exec = do
   refs <- getRefs
   amap <- M.fromListWith M.union . concat <$>
     mapM (fmap maybeToList . toMap b) refs
-  let file = "file://localhost" ++ (g <$> fromAbsFile fpath)
-      g x  = if x == '\\' then '/' else x
+  let file = fromAbsFile fpath
+      uri = "file://" ++ n (g <$> file)
+      g x = if x == '\\' then '/' else x
+      n x = if head x /= '/' then '/' : x else x
   head <$> (liftIO . runX $
-    readDocument [withValidate no] file >>>
+    readDocument [withValidate no] uri  >>>
     exec amap                           >>>
     writeDocument [withIndent yes] file >>>
     errorMsgStderr                      >>>
