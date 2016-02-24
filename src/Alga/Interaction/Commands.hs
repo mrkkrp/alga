@@ -347,12 +347,12 @@ output :: (MonadIO m, MonadThrow m, MonadState AlgaSt m)
   => FilePath          -- ^ Given file name
   -> String            -- ^ Extension
   -> m (Path Abs File) -- ^ Absolute path to output file
-output given' ext = do
-  given  <- resolveFile' given'
-  actual <- fromAbsFile <$> gets stSrcFile
-  a      <- parseAbsFile $
-    if null ext then actual else FP.replaceExtension actual ext
-  return (if null given' then a else given)
+output given' ext =
+  if null given'
+    then do
+      actual <- fromAbsFile <$> gets stSrcFile
+      parseAbsFile (if null ext then actual else FP.replaceExtension actual ext)
+    else resolveFile' given'
 
 -- | Change current file name.
 

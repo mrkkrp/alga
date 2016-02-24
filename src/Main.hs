@@ -98,14 +98,15 @@ license =
 
 runAlga' :: Alga a -> IO ()
 runAlga' e = do
-  mconfig <- forgivingAbsence (resolveFile' ".alga.yaml")
-  c <- case mconfig of
-    Nothing -> return def
-    Just file -> do
-      econfig <- parseAlgaConfig file
+  configFile <- resolveFile' ".alga.yaml"
+  configExists <- doesFileExist configFile
+  c <- if configExists
+    then do
+      econfig <- parseAlgaConfig configFile
       case econfig of
         Left msg -> liftIO (putStrLn msg) >> return def
         Right val -> return val
+    else return def
   srcFile <- makeAbsolute (configSrcFile c)
   void $ runAlga e
     AlgaSt { stBackend = toBackend (configBackend c)

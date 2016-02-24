@@ -1,3 +1,9 @@
+## ALGA 0.2.1
+
+* Fixed issues with `directory` package. Please use `directory-1.2.3.0` or
+  newer. `stack.yaml` file is updated accordingly, if you clone the
+  repository.
+
 ## ALGA 0.2.0
 
 * Use the `path-io` library.
