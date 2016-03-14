@@ -91,7 +91,6 @@ library
 executable alga
   main-is:            Main.hs
   hs-source-dirs:     src
-  other-modules:      Alga.Interaction
   if flag(dev)
     ghc-options:      -O2 -Wall -Werror
   else
