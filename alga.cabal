@@ -57,18 +57,18 @@ library
   else
     ghc-options:      -O2 -Wall
   ghc-prof-options:   -O2 -Wall -prof -fprof-cafs -rtsopts
-  build-depends:      base                   >= 4.8 && < 5
-                    , containers             >= 0.5.5.1
-                    , exceptions             >= 0.8
-                    , haskeline              >= 0.7.1.3
-                    , hxt                    >= 9.3.1.15
-                    , megaparsec             >= 4.2
-                    , mtl                    >= 2.1.3.1
-                    , path                   >= 0.5.3
+  build-depends:      base                   >= 4.8     && < 5.0
+                    , containers             >= 0.5.5.1 && < 0.6
+                    , exceptions             >= 0.8     && < 0.9
+                    , haskeline              >= 0.7.1.3 && < 0.8
+                    , hxt                    >= 9.3.1   && < 9.4
+                    , megaparsec             >= 4.2     && < 6.0
+                    , mtl                    >= 2.1.3.1 && < 3.0
+                    , path                   >= 0.5.3   && < 0.6
                     , random
-                    , text                   >= 1.2.0.4
-                    , tf-random              >= 0.5
-                    , transformers           >= 0.2.0.0
+                    , text                   >= 1.2.0.4 && < 1.3
+                    , tf-random              >= 0.5     && < 1.0
+                    , transformers           >= 0.2.0.0 && < 0.6
   default-extensions: FlexibleContexts
                     , FlexibleInstances
                     , OverloadedStrings
@@ -97,25 +97,25 @@ executable alga
     ghc-options:      -O2 -Wall
   ghc-prof-options:   -O2 -Wall -prof -fprof-cafs -rtsopts
   build-depends:      alga                   >= 0.2.1
-                    , aeson                  >= 0.7
-                    , base                   >= 4.8 && < 5
-                    , containers             >= 0.5.5.1
-                    , data-default           >= 0.5.3
-                    , exceptions             >= 0.8
-                    , filepath               >= 1.3.0.2
-                    , formatting             >= 6.2
-                    , haskeline              >= 0.7.1.3
-                    , hxt                    >= 9.3.1.15
-                    , megaparsec             >= 4.2
-                    , mtl                    >= 2.1.3.1
-                    , optparse-applicative   >= 0.11.0.2
-                    , path                   >= 0.5.3
-                    , path-io                >= 0.3.1
+                    , aeson                  >= 0.7     && < 0.12
+                    , base                   >= 4.8     && < 5.0
+                    , containers             >= 0.5.5.1 && < 0.6
+                    , data-default           >= 0.5.3   && < 0.8
+                    , exceptions             >= 0.8     && < 0.9
+                    , filepath               >= 1.3.0.2 && < 1.5
+                    , formatting             >= 6.2     && < 7.0
+                    , haskeline              >= 0.7.1.3 && < 0.8
+                    , hxt                    >= 9.3.1   && < 9.4
+                    , megaparsec             >= 4.2     && < 6.0
+                    , mtl                    >= 2.1.3.1 && < 3.0
+                    , optparse-applicative   >= 0.11    && < 0.13
+                    , path                   >= 0.5.3   && < 0.6
+                    , path-io                >= 0.3.1   && < 2.0
                     , random
-                    , text                   >= 1.2.0.4
-                    , tf-random              >= 0.5
-                    , transformers           >= 0.2.0.0
-                    , yaml                   >= 0.8.15.1
+                    , text                   >= 1.2.0.4 && < 1.3
+                    , tf-random              >= 0.5     && < 1.0
+                    , transformers           >= 0.2.0.0 && < 0.6
+                    , yaml                   >= 0.8.15  && < 0.9
   default-extensions: FlexibleContexts
                     , FlexibleInstances
                     , OverloadedStrings
@@ -150,20 +150,20 @@ test-suite tests
   else
     ghc-options:      -O2 -Wall
   default-language:   Haskell2010
-  build-depends:      QuickCheck                 >= 2.4 && < 3
+  build-depends:      QuickCheck                 >= 2.4     && < 3.0
                     , alga                       >= 0.2.1
-                    , base                       >= 4.8 && < 5
-                    , containers                 >= 0.5.5.1
-                    , hxt                        >= 9.3.1.15
-                    , megaparsec                 == 4.*
-                    , mtl                        >= 2.1.3.1
+                    , base                       >= 4.8     && < 5.0
+                    , containers                 >= 0.5.5.1 && < 0.6
+                    , hxt                        >= 9.3.1   && < 9.4
+                    , megaparsec                 >= 4.2     && < 6.0
+                    , mtl                        >= 2.1.3.1 && < 3.0
                     , random
-                    , test-framework             >= 0.4 && < 1
-                    , test-framework-quickcheck2 >= 0.3 && < 0.4
-                    , text                       >= 1.2.0.4
-                    , tf-random                  >= 0.5
-                    , transformers               >= 0.2.0.0
+                    , test-framework             >= 0.4     && < 1.0
+                    , test-framework-quickcheck2 >= 0.3     && < 0.4
+                    , text                       >= 1.2.0.4 && < 1.3
+                    , tf-random                  >= 0.5     && < 1.0
+                    , transformers               >= 0.2.0.0 && < 0.6
 
 source-repository head
   type:               git
-  location:           git://github.com/mrkkrp/alga.git
+  location:           https://github.com/mrkkrp/alga.git
