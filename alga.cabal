@@ -18,6 +18,7 @@
 
 name:                 alga
 version:              0.2.1
+cabal-version:        >= 1.10
 synopsis:             Algorithmic automation for various DAWs
 description:
 
@@ -42,8 +43,8 @@ maintainer:           Mark Karpov
 copyright:            Copyright © 2015–2016 Mark Karpov
 category:             Language
 build-type:           Simple
-extra-source-files:   README.md, CHANGELOG.md
-cabal-version:        >= 1.10
+extra-doc-files:      CHANGELOG.md
+                    , README.md
 
 flag dev
   description:        Turn on development settings.
