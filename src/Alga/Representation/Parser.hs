@@ -60,7 +60,7 @@ parseAlga file txt =
     Right x -> if null x
       then Left $ '\"' : file ++ "\":\ninvalid definition syntax"
       else Right x
-    Left  x -> Left . show $ x
+    Left  x -> Left (parseErrorPretty x)
   where parser = if T.pack B.defOp `T.isInfixOf` txt
           then pSource
           else return <$> pExposition
