@@ -30,10 +30,12 @@ import Alga.Language.SyntaxTree
 import Control.Arrow ((***))
 import Control.Monad.State.Lazy
 import Data.List (tails)
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (listToMaybe)
 import Data.Monoid ((<>))
 import System.Random (next)
 import System.Random.TF (TFGen)
+import qualified Data.List.NonEmpty as NE
 
 -- | State record used for calculation\/evaluation of principles.
 
@@ -67,7 +69,7 @@ resolve xs = concat <$> mapM f xs
   where f (Val  x) = addHistory x >> return [x]
         f (Sec  x) = resolve x
         f (Mul  x) = choice x >>= maybe (return []) f
-        f (CMul x) = listToMaybe <$> filterM (matchHistory . fst) x >>=
+        f (CMul x) = listToMaybe <$> filterM (matchHistory . fst) (NE.toList x) >>=
           maybe (f . toMul $ x) (f . Mul . snd)
 
 -- | Run lazy state monad with 'CalcSt' state.
@@ -106,9 +108,9 @@ condMatch hs    (CMul x) = condMatch hs (toMul x)
 -- | Convert internals of conditional multivalue into plain multivalue.
 
 toMul
-  :: [([Element NRatio], [Element NRatio])] -- ^ Pattern\/result pairs
+  :: NonEmpty ([Element NRatio], [Element NRatio]) -- ^ Pattern\/result pairs
   -> Element NRatio    -- ^ Internals of plain multivalue
-toMul xs = Mul (xs >>= snd)
+toMul xs = Mul (NE.toList xs >>= snd)
 
 -- | A monadic wrapper around 'condMatch'.
 
@@ -149,20 +151,20 @@ simplify = (>>= simplifyElt)
 -- several elements after simplification.
 
 simplifyElt :: Element NRatio -> Principle
-simplifyElt x@(Val _)        = [x]
-simplifyElt (Sec  [x])       = simplify [x]
-simplifyElt (Mul  [x])       = simplify [x]
-simplifyElt (CMul [(_, xs)]) = simplifyElt (Mul xs)
-simplifyElt (Sec  xs)        = [Sec (simplifySec xs)]
-simplifyElt (Mul  xs)        = [Mul (simplify xs)]
-simplifyElt (CMul xs)        = [CMul ((simplify *** simplify) <$> xs)]
+simplifyElt x@(Val _)  = [x]
+simplifyElt (Sec  [x]) = simplify [x]
+simplifyElt (Mul  [x]) = simplify [x]
+simplifyElt (CMul ((_, xs):|[])) = simplifyElt (Mul xs)
+simplifyElt (Sec  xs)  = [Sec (simplifySec xs)]
+simplifyElt (Mul  xs)  = [Mul (simplify xs)]
+simplifyElt (CMul xs)  = [CMul ((simplify *** simplify) <$> xs)]
 
 -- | The meat of the algorithm that transforms 'SyntaxTree' into 'Principle'.
 
 toPrin' :: HasEnv m
   => SyntaxTree        -- ^ Syntax tree to transform
   -> m Principle       -- ^ Resulting principle
-toPrin' = liftM concat . mapM f
+toPrin' = fmap concat . mapM f
   where
     fPair (c, x)     = (,) <$> toPrin' c <*> toPrin' x
     f (Value      x) = return . Val <$> return x

@@ -47,10 +47,10 @@ import Numeric.Natural
 import Path
 import Path.IO
 import System.Exit (exitSuccess, ExitCode)
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.IO as T
+import qualified Data.Text.Lazy           as T
+import qualified Data.Text.Lazy.IO        as T
 import qualified System.Console.Haskeline as L
-import qualified System.FilePath as FP
+import qualified System.FilePath          as FP
 
 -- | Description of REPL command.
 

@@ -18,24 +18,30 @@
 
 module Alga.Language.SyntaxTree
   ( SyntaxTree
-  , Sel (..) )
+  , Sel (..)
+  , Statement (..) )
 where
 
 import Alga.Language.Element (NRatio)
+import Alga.Representation.Base
+import Data.Char (isLetter, isAlphaNum)
+import Data.List.NonEmpty (NonEmpty (..))
+import Data.Ratio ((%))
+import Test.QuickCheck
 
 -- | Syntax tree in our case is just a collection of syntactic elements.
 
 type SyntaxTree = [Sel]
 
--- | Syntactic element corresponds to language features. Some of them have
--- direct corresponding constructor in 'Alga.Language.Element.Element',
--- others have to be simplified first.
+-- | Syntactic element corresponds to language tokens. Some of them have
+-- corresponding constructor in 'Alga.Language.Element.Element', others have
+-- to be simplified first.
 
 data Sel
   = Value     NRatio   -- ^ Literal value
   | Section   [Sel]    -- ^ Section
   | Multi     [Sel]    -- ^ Multivalue
-  | CMulti    [([Sel], [Sel])] -- ^ Conditional multivalue
+  | CMulti    (NonEmpty ([Sel], [Sel])) -- ^ Conditional multivalue
   | Reference String   -- ^ Reference (name of variable)
   | Range     NRatio NRatio -- ^ Range of values
   | Product   Sel Sel  -- ^ Product of principles
@@ -45,4 +51,55 @@ data Sel
   | Loop      Sel Sel  -- ^ Loop
   | Rotation  Sel Sel  -- ^ Rotation
   | Reverse   Sel      -- ^ Reversed principle
-    deriving (Eq, Show)
+  deriving (Eq, Show)
+
+instance Arbitrary Sel where
+  arbitrary = sized arbitrarySel
+
+arbitrarySel :: Int -> Gen Sel
+arbitrarySel 0 =
+  oneof [ Value     <$> nonNegative
+        , Reference <$> identifier
+        , Range     <$> nonNegative <*> nonNegative ]
+  where nonNegative = (% 1) . getNonNegative <$> arbitrary
+arbitrarySel n =
+  oneof [ Section  <$> listSel
+        , Multi    <$> listSel
+        , CMulti   <$> listCnd
+        , Product  <$> leafSel <*> leafSel
+        , Division <$> leafSel <*> leafSel
+        , Sum      <$> leafSel <*> leafSel
+        , Diff     <$> leafSel <*> leafSel
+        , Loop     <$> leafSel <*> leafSel
+        , Rotation <$> leafSel <*> leafSel
+        , Reverse  <$> leafSel ]
+  where cnSel d = arbitrarySel (n `div` d)
+        vcSel d = listOf (cnSel $ d * 20)
+        leafSel = cnSel 10
+        listSel = vcSel 20
+        listCnd =
+          let x = (,) <$> vcSel 25 <*> vcSel 25
+          in (:|) <$> x <*> listOf x
+
+-- | Statement can be either definition or exposition. Expositions are only
+-- used in REPL.
+
+data Statement
+  = Definition String SyntaxTree
+  | Exposition SyntaxTree
+  deriving (Eq, Show)
+
+instance Arbitrary Statement where
+  arbitrary = oneof
+    [ Definition <$> identifier <*> arbitrary
+    , Exposition <$> arbitrary ]
+
+----------------------------------------------------------------------------
+-- Helpers
+
+identifier :: Gen String
+identifier = (:) <$> ch0 <*> chN
+  where ch0 = u isLetter
+        chN = listOf $ u (\x -> isAlphaNum x || x == autoDel)
+        u f = frequency [ (1, return '_')
+                        , (74, arbitrary `suchThat` f) ]

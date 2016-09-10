@@ -19,6 +19,7 @@
 module Alga.Language
   ( SyntaxTree
   , Sel (..)
+  , Statement (..)
   , Principle
   , NRatio
   , Element (..)
@@ -39,7 +40,7 @@ module Alga.Language
   , toPrin )
 where
 
-import Alga.Language.SyntaxTree (SyntaxTree, Sel (..))
+import Alga.Language.SyntaxTree (SyntaxTree, Sel (..), Statement (..))
 import Alga.Language.Element (Principle, NRatio, Element (..))
 import Alga.Language.Environment
 import Alga.Language.Eval (evalDef, eval, toPrin)

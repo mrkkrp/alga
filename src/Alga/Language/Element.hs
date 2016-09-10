@@ -27,6 +27,7 @@ module Alga.Language.Element
 where
 
 import Control.Arrow ((***))
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Ratio (Ratio)
 import Numeric.Natural
 
@@ -46,7 +47,7 @@ data Element a
   = Val  a             -- ^ Single value, evaluates to itself
   | Sec  [Element a]   -- ^ Universal container for other values
   | Mul  [Element a]   -- ^ Multivalue, the way to introduce varying elements
-  | CMul [([Element a], [Element a])] -- ^ Conditional multivalue
+  | CMul (NonEmpty ([Element a], [Element a])) -- ^ Conditional multivalue
     deriving (Eq, Show, Functor, Foldable)
 
 instance Applicative Element where

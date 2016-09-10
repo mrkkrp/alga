@@ -47,10 +47,11 @@ import Data.Monoid ((<>))
 import Data.Ratio ((%))
 import Data.Text.Lazy (Text)
 import Numeric.Natural
-import System.Console.Haskeline.MonadException -- FIXME
+import System.Console.Haskeline.MonadException
 import System.Random (split)
 import System.Random.TF (TFGen, mkTFGen)
-import qualified Data.Map.Strict as M
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict    as M
 
 -- | ALGA environment state. Basically this amounts to collection of
 -- definitions and random number generator.
@@ -187,7 +188,7 @@ tDefs name defs = maybe mzero cm $ name `M.lookup` defs
         f (Value      _) = mempty
         f (Section    x) = cm x
         f (Multi      x) = cm x
-        f (CMulti     x) = x >>= (cm *** cm >>> uncurry (<>))
+        f (CMulti     x) = NE.toList x >>= (cm *** cm >>> uncurry (<>))
         f (Reference  x) = return x <> tDefs x defs
         f (Range    _ _) = mempty
         f (Product  x y) = f x <> f y
