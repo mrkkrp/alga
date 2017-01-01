@@ -75,6 +75,6 @@ See [ALGA Manual](https://mrkkrp.github.io/alga/) for more information.
 
 ## License
 
-Copyright © 2015–2016 Mark Karpov
+Copyright © 2015–2017 Mark Karpov
 
 Distributed under GNU GPL, version 3.

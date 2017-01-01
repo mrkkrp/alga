@@ -2,7 +2,7 @@
 -- This module performs patching of data structure that represent tracks
 -- according of state of ALGA environment.
 --
--- Copyright © 2015–2016! Mark Karpov
+-- Copyright © 2015–2017 Mark Karpov
 --
 -- ALGA is free software: you can redistribute it and/or modify it under the
 -- terms of the GNU General Public License as published by the Free Software

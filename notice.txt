@@ -1,4 +1,4 @@
-ALGA Copyright © 2015–2016 Mark Karpov
+ALGA Copyright © 2015–2017 Mark Karpov
 
 This program comes with ABSOLUTELY NO WARRANTY. This is free software,
 and you are welcome to redistribute it under certain conditions; see
