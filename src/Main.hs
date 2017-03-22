@@ -26,6 +26,7 @@ import Alga.Translation (toBackend)
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.FileEmbed
+import Data.Monoid ((<>))
 import Data.Text.Lazy (Text)
 import Data.Version (showVersion)
 import Formatting
